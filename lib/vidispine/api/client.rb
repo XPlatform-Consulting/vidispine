@@ -317,7 +317,7 @@ module Vidispine
         query[:priority] = priority if priority
         query[:jobmetadata] = job_metadata if job_metadata
 
-        http(:post, "/item/#{item_id}/shape", :query => query)
+        http(:post, "/item/#{item_id}/shape", '', :query => query)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job
