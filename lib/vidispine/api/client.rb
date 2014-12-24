@@ -320,7 +320,37 @@ module Vidispine
         http(:post, "/item/#{item_id}/shape", '', :query => query)
       end
 
-      # @see http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job
+      # @see http://apidoc.vidispine.com/latest/ref/item/thumbnail.html#start-a-thumbnail-job
+      def item_thumbnail(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'item/#{path_arguments[:item_id]}/thumbnail',
+            :http_method => :post,
+            :parameters => [
+              { :name => :item_id, :send_in => :path, :required => true },
+
+              :createThumbnails,
+              :createPosters,
+              :thumbnailWidth,
+              :thumbnailHeight,
+              :thumbnailPeriod,
+              :posterWidth,
+              :posterHeight,
+              :postFormat,
+              :notification,
+              :notificationData,
+              :priority,
+              :jobmetadata,
+              :version,
+              :sourceTag
+            ]
+          }.merge(options)
+        )
+        process_request(_request)
+      end
+
+        # @see http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job
       def item_transcode(args = { }, options = { })
         process_request_using_class(Requests::ItemTranscode, args, options)
       end
@@ -335,7 +365,7 @@ module Vidispine
             :parameters => [
               { :name => :item_id, :aliases => [ :id ], :required => true, :send_in => :path },
               :type,
-              :tag,
+              { :name => :tag, :aliases => [ :tags ] },
               :scheme,
               :closedFiles
             ]
