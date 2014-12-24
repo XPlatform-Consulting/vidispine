@@ -1,8 +1,9 @@
+require 'json'
+require 'pp'
+require 'rexml/document'
+
 require 'vidispine/cli'
 require 'vidispine/api/utilities'
-
-require 'json'
-require 'rexml/document'
 
 module Vidispine
 
