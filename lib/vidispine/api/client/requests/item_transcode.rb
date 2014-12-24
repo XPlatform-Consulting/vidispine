@@ -6,6 +6,8 @@ module Vidispine::API::Client::Requests
     HTTP_PATH = '/item/#{path_arguments[:item_id]}/transcode'
 
     PARAMETERS = [
+      { :name => :item_id, :aliases => [ :id ], :send_in => :path, :required => true },
+
       { :name => :tag, :required => true },
       :createThumbnails,
       :createPosters,
