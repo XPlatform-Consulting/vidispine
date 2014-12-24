@@ -149,6 +149,7 @@ module Vidispine
         http(:put, "collection/#{collection_id}/rename", '', :query => { :name => name } )
       end
 
+      # @see http://apidoc.vidispine.com/4.2/ref/collection.html#retrieve-a-list-of-all-collections
       def collections_get
         http(:get, 'collection')
       end
@@ -374,41 +375,42 @@ module Vidispine
       # @see http://apidoc.vidispine.com/latest/ref/item/item.html#search-items
       def items_search(args = { }, options = { })
         _request = Requests::BaseRequest.new(
-            args,
-            {
-                :http_path => 'item',
-                :http_method => :put,
-                :default_parameter_send_in_value => :matrix,
-                :parameters => [
-                  { :name => :result, :send_in => :query },
+          args,
+          {
+            :http_path => 'item',
+            :http_method => :put,
+            :default_parameter_send_in_value => :matrix,
+            :parameters => [
+              { :name => :result, :send_in => :query },
 
-                  :library,
-                  :first,
-                  :number,
-                  :libraryId,
-                  :autoRefresh,
-                  :updateMode,
-                  :updateFrequency,
+              :library,
+              :first,
+              :number,
+              :libraryId,
+              :autoRefresh,
+              :updateMode,
+              :updateFrequency,
 
-                  { :name => :ItemSearchDocument, :send_in => :body }
-                ]
-            }.merge(options)
+              { :name => :ItemSearchDocument, :send_in => :body }
+            ]
+          }.merge(options)
         )
         process_request(_request)
       end
+
       # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#delete--storage-(storage-id)
       def storage_delete(args = { }, options = { })
         args = { :storage_id => args } if args.is_a?(String)
         _request = Requests::BaseRequest.new(
-            args,
-            {
-              :http_path => 'storage/#{path_arguments[:storage_id]}',
-              :http_method => :delete,
-              :parameters => [
-                { :name => :storage_id, :aliases => [ :id ], :send_in => :path, :required => true },
-                :safe
-              ]
-            }.merge(options)
+          args,
+          {
+            :http_path => 'storage/#{path_arguments[:storage_id]}',
+            :http_method => :delete,
+            :parameters => [
+              { :name => :storage_id, :aliases => [ :id ], :send_in => :path, :required => true },
+              :safe
+            ]
+          }.merge(options)
         )
         process_request(_request)
       end
@@ -457,19 +459,19 @@ module Vidispine
       # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#retrieve-list-of-storages
       def storages_get(args = { }, options = { })
         _request = Requests::BaseRequest.new(
-            args,
-            {
-              :http_path => 'storage',
-              :parameters => [
-                :size,
-                :freebytes,
-                :usedbytes,
-                :freeamount,
-                :files,
-                :storagegroup,
-                :status
-              ]
-            }.merge(options)
+          args,
+          {
+            :http_path => 'storage',
+            :parameters => [
+              :size,
+              :freebytes,
+              :usedbytes,
+              :freeamount,
+              :files,
+              :storagegroup,
+              :status
+            ]
+          }.merge(options)
         )
         process_request(_request)
       end
