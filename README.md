@@ -121,6 +121,8 @@ Or install it yourself using the specific_install gem:
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_shape_import --method-arguments '{"item_id":"VX-1","uri":"file:///srv/media1/test.mov","tag":"original"}'
 
+#### [item_thumbnail](http://apidoc.vidispine.com/latest/ref/item/thumbnail.html#start-a-thumbnail-job)
+
 #### [item_transcode](http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job)
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_transcode --method-arguments '{"tag":"original"}'
@@ -166,6 +168,10 @@ Or install it yourself using the specific_install gem:
     
     Get All Matches
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_get_by_name --method-arguments '[{"collection_name":"SomeName"},{"return_first_match":false}]'
+
+#### item_create_with_proxy_using_file_id
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_create_with_proxy_using_file_id --method-arguments '{"storage_id":"VX-1","original_file_path":"test_original.mp4","lowres_file_path":"test_lowres.mp4"}'
 
 #### item_annotation_create
 

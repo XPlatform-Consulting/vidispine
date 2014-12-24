@@ -40,6 +40,9 @@ module Vidispine
 
         storage_id = args[:storage_id]
 
+        create_posters = args[:create_posters] #|| '300@NTSC'
+        create_thumbnails = args.fetch(:create_thumbnails, true)
+
         # Create a placeholder
         # /API/import/placeholder/?container=1&video=1
         place_holder = placeholder_create(placeholder_args)
@@ -47,7 +50,9 @@ module Vidispine
 
         # /API/storage/VX-2/file/?path=storages/test/test_orginal2.mp4
         original_file = storage_file_get(:storage_id => storage_id, :path => original_file_path)
-        original_file_id = original_file['file'].first['id']
+        original_file = original_file['file'].first
+        raise RuntimeError, "File Not Found. '#{original_file_path}' in storage '#{storage_id}'" unless original_file
+        original_file_id = original_file['id']
 
         # /API/item/VX-98/shape?tag=original&fileId=[FileIDofOriginal]
         item_shape_import(:item_id => item_id, :tag => 'original', :file_id => original_file_id)
@@ -60,7 +65,10 @@ module Vidispine
         item_shape_import(:item_id => item_id, :tag => 'lowres', :file_id => lowres_file_id)
 
         # /API/item/VX-98/thumbnail/?createThumbnails=true&createPoster
-        item_transcode(:item_id => item_id, :type => 'thumbnail', :create_thumbnails => true, :tag => 'original,lowres')
+        item_thumbnail_args = { :item_id => item_id }
+        item_thumbnail_args[:createThumbnails] = create_thumbnails
+        item_thumbnail_args[:createPosters] = create_posters if create_posters
+        item_thumbnail(item_thumbnail_args)
 
         { :item_id => item_id, :original_file_id => original_file_id, :lowres_file_id => lowres_file_id }
       end
