@@ -124,7 +124,7 @@ module Vidispine
         _request = Requests::BaseRequest.new(
           args,
           {
-            :http_path => 'v1/item/#{item_id/annotation',
+            :http_path => 'v1/item/#{arguments[item_id]}/annotation',
             :http_method => :post,
             :default_parameter_send_in_value => :body,
             :parameters => [
