@@ -94,6 +94,7 @@ module Vidispine
           end
         end
 
+        # @param [HTTPRequest] request
         def send_request(request)
           @response_parsed = nil
           @request = request
@@ -114,6 +115,9 @@ module Vidispine
                                end
         end
 
+        # @param [String] path
+        # @param [Hash|String|Nil] query
+        # @return [URI]
         def build_uri(path = '', query = nil)
           _query = query.is_a?(Hash) ? query.map { |k,v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v)}" }.join('&') : query
           _path = "#{path}#{_query and _query.respond_to?(:empty?) and !_query.empty? ? "?#{_query}" : ''}"
