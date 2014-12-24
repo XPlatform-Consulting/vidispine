@@ -49,12 +49,12 @@ module Vidispine
         item_id = place_holder['id']
 
         # /API/storage/VX-2/file/?path=storages/test/test_orginal2.mp4
-        original_file = storage_file_get(:storage_id => storage_id, :path => original_file_path)
+        _original_file = original_file = storage_file_get(:storage_id => storage_id, :path => original_file_path)
         original_file = original_file['file']
         begin
           original_file = original_file.first
         rescue => e
-          raise "Error Getting File from Response. #{$!}\n#{original_file.inspect}"
+          raise "Error Getting File from Response. #{$!}\n#{original_file.inspect}\n#{_original_file.inspect}"
         end
         raise RuntimeError, "File Not Found. '#{original_file_path}' in storage '#{storage_id}'" unless original_file
         original_file_id = original_file['id']
