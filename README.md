@@ -125,7 +125,7 @@ Or install it yourself using the specific_install gem:
 
 #### [item_transcode](http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job)
 
-    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_transcode --method-arguments '{"tag":"original"}'
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_transcode --method-arguments '{"item_id":"VX-116", "tag":"original"}'
 
 #### [item_uris_get](http://apidoc.vidispine.com/4.2/ref/item-content.html#get--item-\(item-id\)-uri)
 
