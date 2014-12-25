@@ -86,7 +86,7 @@ module Vidispine
             param_name = normalize_parameter_name(proper_parameter_name)
             arg_key = (has_key = args.has_key?(param_name)) ?
                 param_name :
-                ( (_k[:aliases] || [ ]).map { |a| a.to_s }.find { |a| has_key = args.has_key?(a) } || param_name )
+                ( (_k[:aliases] || [ ]).map { |a| normalize_parameter_name(a) }.find { |a| has_key = args.has_key?(a) } || param_name )
 
             value = has_key ? args[arg_key] : _k[:default_value]
             is_set = has_key || _k.has_key?(:default_value)
