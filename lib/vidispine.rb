@@ -1,4 +1,4 @@
-require "vidispine/version"
+require 'vidispine/version'
 
 module Vidispine
   # Your code goes here...
