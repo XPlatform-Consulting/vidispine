@@ -96,12 +96,12 @@ module Vidispine
         _request = Requests::BaseRequest.new(
           args,
           {
-            :http_path => 'collection/#{path_arguments[:collection_id]/#{path_arguments[:object_id]}',
+            :http_path => 'collection/#{path_arguments[:collection_id]}/#{path_arguments[:object_id]}',
             :http_method => :put,
             :parameters => [
-              { :name => :collection_id, :required => true, :send_in => :body },
+              { :name => :collection_id, :required => true, :send_in => :path },
               { :name => :object_id,
-                :aliases => [ :item_id, :library_id, :collection_to_add_id ], :required => true, :send_in => :body },
+                :aliases => [ :item_id, :library_id, :collection_to_add_id ], :required => true, :send_in => :path },
               { :name => :type, :aliases => [ :object_type ] },
               :addItems
             ],
@@ -119,9 +119,9 @@ module Vidispine
             :http_path => 'collection/#{path_arguments[:collection_id]}/#{path_arguments[:object_id]}',
             :http_method => :delete,
             :parameters => [
-              { :name => :collection_id, :required => true, :send_in => :body },
+              { :name => :collection_id, :required => true, :send_in => :path },
               { :name => :object_id,
-                :aliases => [ :item_id, :library_id, :collection_to_add_id ], :required => true, :send_in => :body },
+                :aliases => [ :item_id, :library_id, :collection_to_add_id ], :required => true, :send_in => :path },
               { :name => :type, :aliases => [ :object_type ] },
             ]
           }.merge(options)
@@ -361,7 +361,7 @@ module Vidispine
         _request = Requests::BaseRequest.new(
           args,
           {
-            :http_path => '"/item/#{item_id}/uri"',
+            :http_path => '"/item/#{arguments[item_id]}/uri"',
             :parameters => [
               { :name => :item_id, :aliases => [ :id ], :required => true, :send_in => :path },
               :type,
