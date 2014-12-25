@@ -75,7 +75,7 @@ Or install it yourself using the specific_install gem:
 
 #### [collection_rename](http://apidoc.vidispine.com/4.2/ref/collection.html#rename-a-collection)
 
-    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_rename --method-arguments '{"collection_id":"VX-1","name"}'
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_rename --method-arguments '{"collection_id":"VX-1","name":"NewName"}'
 
 #### [collections_get](http://apidoc.vidispine.com/latest/ref/collection.html#retrieve-a-list-of-all-collections)
 
@@ -122,6 +122,8 @@ Or install it yourself using the specific_install gem:
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_shape_import --method-arguments '{"item_id":"VX-1","uri":"file:///srv/media1/test.mov","tag":"original"}'
 
 #### [item_thumbnail](http://apidoc.vidispine.com/latest/ref/item/thumbnail.html#start-a-thumbnail-job)
+
+  TODO: ADD EXAMPLE
 
 #### [item_transcode](http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job)
 
