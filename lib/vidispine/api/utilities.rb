@@ -50,6 +50,8 @@ module Vidispine
 
         # /API/storage/VX-2/file/?path=storages/test/test_orginal2.mp4
         _original_file = original_file = storage_file_get(:storage_id => storage_id, :path => original_file_path)
+        raise "Unexpected Response Format. Expecting Hash instead of #{original_file.class.name} #{original_file}" unless _original_file.is_a?(Hash)
+
         original_file = original_file['file']
         begin
           original_file = original_file.first
@@ -144,7 +146,7 @@ module Vidispine
               { :name => :item_id, :aliases => [ :id ], :required => true, :send_in => :path },
 
               :inpoint,
-              :output,
+              :outpoint,
               { :name => :title, :default => '' },
             ]
           }.merge(options)
