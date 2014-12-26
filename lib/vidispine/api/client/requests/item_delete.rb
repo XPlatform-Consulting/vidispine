@@ -1,6 +1,6 @@
 module Vidispine::API::Client::Requests
 
-  class ItemDelete
+  class ItemDelete < BaseRequest
 
     HTTP_METHOD = :delete
     HTTP_PATH = '/item/#{path_arguments[:item_id]}'
