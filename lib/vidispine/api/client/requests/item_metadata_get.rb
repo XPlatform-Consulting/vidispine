@@ -4,7 +4,7 @@ module Vidispine::API::Client::Requests
   class ItemMetadataGet < BaseRequest
     # @see http://apidoc.vidispine.com/4.2/ref/metadata/metadata.html#get--item-(id)-metadata
 
-    HTTP_METHOD = :post
+    HTTP_METHOD = :get
     HTTP_PATH = '/item/#{path_arguments[:item_id]}/metadata'
 
     DEFAULT_PARAMETER_SEND_IN_VALUE = :matrix
