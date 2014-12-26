@@ -146,7 +146,7 @@ module Vidispine
         collection_id = CGI.escape(_args[:collection_id])
         name = _args[:name]
 
-        http(:put, "collection/#{collection_id}/rename", '', :query => { :name => name } )
+        http(:put, "collection/#{collection_id}/rename", '', :query => { :name => name }, :headers => { 'Content-Type' => 'text/plain' } )
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#retrieve-a-list-of-all-collections
