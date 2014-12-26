@@ -67,7 +67,7 @@ Or install it yourself using the specific_install gem:
 
 #### [collection_object_add](http://apidoc.vidispine.com/4.2/ref/collection.html#add-an-item-library-or-collection-to-a-collection)
 
-    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_object_add --method-arguments '{"collection_id":"VX-1","object_id":"VX-2"}'
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_object_add --method-arguments '{"collection_id":"VX-1","object_id":"VX-2","type":'item"}'
 
 #### [collection_object_remove](http://apidoc.vidispine.com/4.2/ref/collection.html#remove-an-item-library-or-collection-from-a-collection)
 
@@ -99,6 +99,7 @@ Or install it yourself using the specific_install gem:
 
 #### [item_delete](http://apidoc.vidispine.com/latest/ref/item/item.html#delete-a-single-item)
 
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_delete --method-arguments '{"item_id":"VX-117"}'
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_delete --method-arguments '{"item_id":"VX-117","keepShapeTagMedia":"lowres,webm,original","keepShapeTagStorage":"VX-2,VX-3"}'
 
 #### [item_get](http://apidoc.vidispine.com/latest/ref/item/item.html#get-information-about-a-single-item)
@@ -132,6 +133,7 @@ Or install it yourself using the specific_install gem:
 #### [item_uris_get](http://apidoc.vidispine.com/4.2/ref/item-content.html#get--item-\(item-id\)-uri)
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_uris_get --method-arguments '{"item_id":"VX-1"}'
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_uris_get --method-arguments '{"item_id":"VX-1","tag":"lowres"}'
 
 #### [items_get](http://apidoc.vidispine.com/latest/ref/item/item.html#retrieve-a-list-of-all-items)
 
@@ -177,7 +179,7 @@ Or install it yourself using the specific_install gem:
 
 #### item_annotation_create
 
-    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_annotation_get --method-arguments '{"item_id":"VX-1","inpoint":"00:00:00:00","outpoint":"00:00:00:01","title":"SomeTitle"}'
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_annotation_create --method-arguments '{"item_id":"VX-1","inpoint":"00:00:00:00","outpoint":"00:00:00:01","title":"SomeTitle"}'
 
 #### item_annotation_get
 
