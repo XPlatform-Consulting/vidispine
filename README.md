@@ -99,7 +99,7 @@ Or install it yourself using the specific_install gem:
 
 #### [item_delete](http://apidoc.vidispine.com/latest/ref/item/item.html#delete-a-single-item)
 
-    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_delete --method-arguments '{"item_id":"VX-1"}'
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_delete --method-arguments '{"item_id":"VX-117","keepShapeTagMedia":"lowres,webm,original","keepShapeTagStorage":"VX-2,VX-3"}'
 
 #### [item_get](http://apidoc.vidispine.com/latest/ref/item/item.html#get-information-about-a-single-item)
 
