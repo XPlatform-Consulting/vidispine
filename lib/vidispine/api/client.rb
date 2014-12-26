@@ -361,7 +361,7 @@ module Vidispine
         _request = Requests::BaseRequest.new(
           args,
           {
-            :http_path => '"/item/#{arguments[item_id]}/uri"',
+            :http_path => '/item/#{arguments[item_id]}/uri',
             :parameters => [
               { :name => :item_id, :aliases => [ :id ], :required => true, :send_in => :path },
               :type,
