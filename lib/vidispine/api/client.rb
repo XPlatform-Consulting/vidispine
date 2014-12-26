@@ -308,7 +308,7 @@ module Vidispine
         job_metadata = _args[:jobmetadata]
 
         query = { }
-        query[:uri] = CGI.escape(uri) if uri
+        query[:uri] = uri if uri
         query[:fileId] = file_id if file_id
         query[:tag] = tag if tag
         query[:settings] = settings if settings
