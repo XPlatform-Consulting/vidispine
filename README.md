@@ -71,7 +71,7 @@ Or install it yourself using the specific_install gem:
 
 #### [collection_object_remove](http://apidoc.vidispine.com/4.2/ref/collection.html#remove-an-item-library-or-collection-from-a-collection)
 
-    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_object_remove --method-arguments '{"collection_id":"VX-1","object_id":"VX-2"}'
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_object_remove --method-arguments '{"collection_id":"VX-1","object_id":"VX-2","type":"item"}'
 
 #### [collection_rename](http://apidoc.vidispine.com/4.2/ref/collection.html#rename-a-collection)
 
