@@ -7,8 +7,8 @@ module Vidispine::API::Client::Requests
     HTTP_PATH = '/import/placeholder/#{path_arguments[:item_id]}/#{path_arguments[:item_type]}'
 
     PARAMETERS = [
-      { :name => :item_id, :required => true },
-      { :name => :item_type, :required => true },
+      { :name => :item_id, :required => true, :send_in => :path },
+      { :name => :item_type, :required => true, :send_in => :path },
       :uri,
       :fileId,
       :tag,
