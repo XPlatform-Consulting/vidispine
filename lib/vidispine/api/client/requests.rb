@@ -8,4 +8,5 @@ require 'vidispine/api/client/requests/item_delete'
 require 'vidispine/api/client/requests/item_metadata_get'
 require 'vidispine/api/client/requests/item_transcode'
 
+require 'vidispine/api/client/requests/search'
 require 'vidispine/api/client/requests/storage_file_get'
