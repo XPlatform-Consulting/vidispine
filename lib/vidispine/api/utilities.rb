@@ -42,6 +42,7 @@ module Vidispine
         raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
 
         file_path_relative_to_storage_path = file_path.sub(volume_path, '')
+        logger.debug { "File Path Relative to Storage Path: #{file_path_relative_to_storage_path}" }
 
         storage = storage_get(:id => storage) if storage.is_a?(String)
         _response[:storage] = storage
@@ -51,6 +52,7 @@ module Vidispine
         storage_uri = URI.parse(storage_uri_raw)
 
         vidispine_file_path = File.join(storage_uri.path, file_path_relative_to_storage_path)
+        logger.debug { "Vidispine File Path: '#{vidispine_file_path}'" }
         _response[:vidispine_file_path] = vidispine_file_path
 
         # 3 Get Collection
