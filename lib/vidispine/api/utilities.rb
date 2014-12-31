@@ -104,7 +104,7 @@ module Vidispine
           # 4.4 Create the Placeholder
           logger.debug { 'Creating Placeholder.' }
           placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
-          item = placeholder = placeholder_create(placeholder_args)
+          item = placeholder = import_placeholder(placeholder_args)
           _response[:placeholder] = placeholder
         # else
         #   logger.debug { 'Getting File Using Path.' }
@@ -124,12 +124,15 @@ module Vidispine
         # Item was already in the system so exit here
         return _response unless file
 
-        file_uri = file['uri'].first
-        raise "File URI Not Found. #{file.inspect}" unless file_uri
+        # file_uri = file['uri'].first
+        # raise "File URI Not Found. #{file.inspect}" unless file_uri
+
+        file_id = file['id']
+        raise "File Id Not Found. #{file.inspect}" unless file_id
 
         # 6. Add the file as the original shape
         logger.debug { 'Adding the file as the Original Shape.' }
-        item_shape_import_response = item_shape_import(:item_id => item_id, :uri => file_uri)
+        item_shape_import_response = item_shape_import(:item_id => item_id, :file_id => file_id, :tag => 'original')
         _response[:item_shape_import] = item_shape_import_response
 
         # 7. Generate the Transcode of the item
