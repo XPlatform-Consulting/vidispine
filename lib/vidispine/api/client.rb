@@ -7,10 +7,11 @@ module Vidispine
   module API
     class Client
 
-      attr_accessor :http_client, :request, :response
+      attr_accessor :http_client, :request, :response, :logger
 
       def initialize(args = { })
         @http_client = HTTPClient.new(args)
+        @logger = http_client.logger
       end
 
       def process_request(request, options = nil)
@@ -102,7 +103,7 @@ module Vidispine
               { :name => :collection_id, :required => true, :send_in => :path },
               { :name => :object_id,
                 :aliases => [ :item_id, :library_id, :collection_to_add_id ], :required => true, :send_in => :path },
-              { :name => :type, :aliases => [ :object_type ] },
+              { :name => :type, :aliases => [ :object_type ], :default_value => 'item' }, # The documentation states that item is the default, but we get a 'Type is missing error if this is not passed'
               :addItems
             ],
           }.merge(options)
@@ -150,7 +151,7 @@ module Vidispine
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#retrieve-a-list-of-all-collections
-      def collections_get
+      def collections_get(args = { }, options = { })
         http(:get, 'collection')
       end
       alias :collections :collections_get
@@ -214,11 +215,13 @@ module Vidispine
         )
         process_request(_request)
       end
+      alias :item :item_get
 
       # @see http://apidoc.vidispine.com/4.2/ref/metadata/metadata.html#get--item-(id)-metadata
       def item_metadata_get(args = { }, options = { })
         process_request_using_class(Requests::ItemMetadataGet, args, options)
       end
+      alias :item_metadata :item_metadata_get
 
       # @see http://apidoc.vidispine.com/4.2/ref/metadata/metadata.html#add-a-metadata-change-set
       def item_metadata_set(args = { }, options = { })
@@ -235,7 +238,7 @@ module Vidispine
 
               :revision,
 
-              { :name => :MetadataDocument, :send_in => :body, :default => { } }
+              { :name => :MetadataDocument, :send_in => :body, :default_value => { } }
             ]
           }.merge(options)
         )
@@ -401,6 +404,7 @@ module Vidispine
         )
         process_request(_request)
       end
+      alias :items :items_get
 
       # @see http://apidoc.vidispine.com/latest/ref/item/item.html#search-items
       def items_search(args = { }, options = { })
@@ -420,6 +424,53 @@ module Vidispine
               :autoRefresh,
               :updateMode,
               :updateFrequency,
+
+              { :name => :ItemSearchDocument, :send_in => :body }
+            ]
+          }.merge(options)
+        )
+        process_request(_request)
+      end
+
+      def metadata_field_terse_schema(args = { }, options = { })
+        default_options = { :headers => { 'accept' => '*/*' } }
+        _options = options.merge(default_options)
+        http(:get ,'metadata-field/terse-schema', _options)
+      end
+
+
+      # @see http://apidoc.vidispine.com/latest/ref/search.html#id2
+      # @example search(:content => :metadata, :field => :title, :item_search_document => { :field => [ { :name => 'title', :value => [ { :value => 'something' } ] } ] } )
+      def search(args = { }, options = { })
+        process_request_using_class(Requests::Search, args, options)
+      end
+
+      def search_browse(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'search',
+            :parameters => [
+              :content,
+              :interval,
+              :field,
+              :group,
+              :language,
+              :samplerate,
+              :track,
+              :terse,
+              :include,
+              :type,
+              :tag,
+              :scheme,
+              :closedFiles,
+              'noauth-url',
+              :defaultValue,
+              :methodType,
+              :version,
+              :revision,
+
+              { :name => :first, :send_in => :matrix },
 
               { :name => :ItemSearchDocument, :send_in => :body }
             ]
@@ -464,6 +515,7 @@ module Vidispine
         )
         process_request(_request)
       end
+      alias :storage :storage_get
 
       # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#storage-methods
       def storage_method_get(args = { }, options = { })
@@ -486,6 +538,18 @@ module Vidispine
         process_request(_request)
       end
 
+      # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#rescanning
+      # @param [String|Hash] args
+      # @option args [String] :storage_id
+      def storage_rescan(args = { }, options = { })
+        storage_id = args.is_a?(String) ? args : begin
+          _data = Requests::BaseRequest.process_parameters([ { :name => :storage_id, :aliases => [ :id ] } ], args)
+          _args = _data[:arguments_out]
+          _args[:storage_id]
+        end
+        http(:post, "storage/#{storage_id ? "#{storage_id}/" : ''}rescan", '')
+      end
+
       # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#retrieve-list-of-storages
       def storages_get(args = { }, options = { })
         _request = Requests::BaseRequest.new(
@@ -505,6 +569,7 @@ module Vidispine
         )
         process_request(_request)
       end
+      alias :storages :storages_get
 
       # @!endgroup API Endpoints
       # ############################################################################################################## #
