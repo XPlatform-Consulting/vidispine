@@ -63,7 +63,7 @@ module Vidispine
             file_path_collection_name_position = args[:relative_file_path_collection_name_position]
             raise ArgumentError, ':collection_id, :collection_name, or :file_path_collection_name_position argument is required.' unless file_path_collection_name_position
 
-            file_path_split = (file_path_relative_to_storage_path.start_with?('/') ? file_path_relative_to_storage_path[1..-1] : file_path_collection_name_position).split('/')
+            file_path_split = (file_path_relative_to_storage_path.start_with?('/') ? file_path_relative_to_storage_path[1..-1] : file_path_relative_to_storage_path).split('/')
             collection_name = file_path_split[file_path_collection_name_position]
             raise ArgumentError, 'Unable to determine collection name from path.' unless collection_name
             logger.debug { "Using '#{collection_name}' as collection_name. File Path Array: #{file_path_split.inspect}" }
