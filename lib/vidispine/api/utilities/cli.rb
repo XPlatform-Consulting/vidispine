@@ -17,14 +17,15 @@ module Vidispine
           default_http_host_address = Vidispine::API::Client::HTTPClient::DEFAULT_HTTP_HOST_ADDRESS
           default_http_host_port = Vidispine::API::Client::HTTPClient::DEFAULT_HTTP_HOST_PORT
           default_accepts_header = Vidispine::API::Client::HTTPClient::DEFAULT_HEADER_ACCEPTS
+          default_content_type_header = Vidispine::API::Client::HTTPClient::DEFAULT_HEADER_CONTENT_TYPE
 
           argument_parser.on('--host-address HOSTADDRESS', 'The address of the server to communicate with.', "\tdefault: #{default_http_host_address}") { |v| arguments[:http_host_address] = v }
           argument_parser.on('--host-port HOSTPORT', 'The port to use when communicating with the server.', "\tdefault: #{default_http_host_port}") { |v| arguments[:http_host_port] = v }
           argument_parser.on('--username USERNAME', 'The account username to authenticate with.') { |v| arguments[:username] = v }
           argument_parser.on('--password PASSWORD', 'The account password to authenticate with.') { |v| arguments[:password] = v }
 
-          argument_parser.on('--accepts-header VALUE', 'The value for the Accepts header sent in each request.', "\tdefault: #{default_accepts_header}") { |v| arguments[:accepts_header] = v }
-
+          argument_parser.on('--accept-header VALUE', 'The value for the Accept header sent in each request.', "\tdefault: #{default_accepts_header}") { |v| arguments[:accepts_header] = v }
+          argument_parser.on('--content-type VALUE', 'The value for the Content-Type header sent in each request.', "\tdefault: #{default_content_type_header}") { |v| arguments[:content_type] = v }
           argument_parser.on('--method-name METHODNAME', 'The name of the method to call.') { |v| arguments[:method_name] = v }
           argument_parser.on('--method-arguments JSON', 'The arguments to pass when calling the method.') { |v| arguments[:method_arguments] = v }
           argument_parser.on('--pretty-print', 'Will format the output to be more human readable.') { |v| arguments[:pretty_print] = v }
@@ -44,7 +45,7 @@ module Vidispine
         end
 
         def initialize_api(args = { })
-          @api = Vidispine::API::Utilities.new(args.merge(:parse_response => false))
+          @api = Vidispine::API::Utilities.new(args )
         end
 
         def run(args = arguments, opts = options)
