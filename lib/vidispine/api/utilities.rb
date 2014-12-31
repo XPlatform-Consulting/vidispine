@@ -35,7 +35,7 @@ module Vidispine
         storage_path_map = args[:storage_path_map]
         raise ArgumentError, ':storage_path_map is a required argument.' unless storage_path_map
 
-        volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path) }
+        volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path.to_s) }
         raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
 
         file_path_relative_to_storage_path = file_path.sub(volume_path, '')
