@@ -165,6 +165,10 @@ Or install it yourself using the specific_install gem:
 
 ### Utility Methods
 
+#### collection_file_add_using_path
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_file_add_using_path --method-arguments '{"storage_path_map":{"/Volumes/storages/media1":"VX-1"},"relative_file_path_collection_name_position":0,"metadata_file_path_field_id":"portal_mf48881","file_path":"/Volumes/storages/media1/MyCollectionName/test12_original.mp4"}'
+
 #### collection_get_by_name
 
     Get First Match
@@ -173,9 +177,9 @@ Or install it yourself using the specific_install gem:
     Get All Matches
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_get_by_name --method-arguments '[{"collection_name":"SomeName"},{"return_first_match":false}]'
 
-#### item_create_with_proxy_using_file_id
+#### item_create_with_proxy_using_storage_file_paths
 
-    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_create_with_proxy_using_file_id --method-arguments '{"storage_id":"VX-1","original_file_path":"test_original.mp4","lowres_file_path":"test_lowres.mp4"}'
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_create_with_proxy_using_storage_file_paths --method-arguments '{"storage_id":"VX-1","original_file_path":"test_original.mp4","lowres_file_path":"test_lowres.mp4"}'
 
 #### item_annotation_create
 
