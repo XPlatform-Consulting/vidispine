@@ -18,10 +18,6 @@ module Vidispine
       argument_parser.on_tail('-h', '--help', 'Display this message.') { puts help; exit }
     end
 
-    def self.default_options_file_path
-      File.expand_path(File.basename($0, '.*'), '~/.options')
-    end
-
     def self.default_arguments
       @default_arguments ||= {
         :options_file_path => default_options_file_path,
@@ -53,19 +49,6 @@ Usage:
 Options:
       BANNER
       argument_parser
-    end
-
-    attr_accessor :logger, :initial_arguments, :initial_options, :arguments, :options
-
-    def initialize(args = self.class.parse_arguments, opts = { })
-      @initial_arguments = args.dup
-      @initial_options = opts.dup
-
-      @arguments = args.dup
-      @options = opts.dup
-
-      initialize_logger(@arguments)
-      after_initialize
     end
 
     def after_initialize
@@ -102,6 +85,37 @@ Options:
       @arguments_from_options_file ||= parse_arguments_from_options_file(options_file_path)
     end
 
+    def self.clear_cached_arguments
+      @arguments_from_command_line = nil
+      @arguments_from_options_file = nil
+      @arguments = nil
+      @default_arguments = nil
+      argument_parser(:force_new => true)
+      true
+    end
+
+    def self.default_options_file_path
+      File.expand_path(File.basename($0, '.*'), '~/.options')
+    end
+
+    def self.executable_name
+      @executable_name ||= File.basename($0)
+    end
+
+    def self.log_to_as_string
+      _log_to = arguments[:log_to]
+      case _log_to
+        when STDERR; 'STDERR'
+        when STDOUT; 'STDOUT'
+        else _log_to
+      end
+    end
+
+    def self.parse_arguments
+      argument_parser
+      @arguments = default_arguments.merge(arguments_from_options_file).merge(arguments_from_command_line)
+    end
+
     def self.parse_arguments_from_command_line(array_of_arguments = ARGV)
       arguments_before = arguments.dup
       arguments.clear
@@ -121,37 +135,23 @@ Options:
       _arguments_from_options_file
     end
 
-    def self.parse_arguments
-      argument_parser
-      @arguments = default_arguments.merge(arguments_from_options_file).merge(arguments_from_command_line)
-    end
-
-    def self.clear_cached_arguments
-      @arguments_from_command_line = nil
-      @arguments_from_options_file = nil
-      @arguments = nil
-      @default_arguments = nil
-      argument_parser(:force_new => true)
-      true
-    end
-
-    def self.executable_name
-      @executable_name ||= File.basename($0)
-    end
-
-    def self.log_to_as_string
-      _log_to = arguments[:log_to]
-      case _log_to
-        when STDERR; 'STDERR'
-        when STDOUT; 'STDOUT'
-        else _log_to
-      end
-    end
-
     def self.run(args = nil, init_options = { }, run_options = nil)
       args ||= parse_arguments
       run_options ||= init_options
       new(args, init_options).run(args, run_options)
+    end
+
+    attr_accessor :logger, :initial_arguments, :initial_options, :arguments, :options
+
+    def initialize(args = self.class.parse_arguments, opts = { })
+      @initial_arguments = args.dup
+      @initial_options = opts.dup
+
+      @arguments = args.dup
+      @options = opts.dup
+
+      initialize_logger(@arguments)
+      after_initialize
     end
 
     # @param [Hash] args
@@ -160,7 +160,7 @@ Options:
     # @option args [Integer]    :log_level (Logger::DEBUG) The logging level to be set to the logger
     def initialize_logger(args = { })
       @logger = args[:logger] ||= Logger.new(args[:log_to] ||= STDERR)
-      @logger.level = (log_level = args[:log_level]) ? log_level : Logger::DEBUG
+      @logger.level = args.fetch(:log_level, Logger::DEBUG)
       args[:logger] = @logger
       args[:log_level] ||= @logger.level
       @logger
