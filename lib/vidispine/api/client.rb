@@ -432,6 +432,64 @@ module Vidispine
         process_request(_request)
       end
 
+      # @see http://apidoc.vidispine.com/4.2/ref/job.html#delete--job-(job-id)
+      def job_abort(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'job/#{arguments[:job_id]}',
+            :http_method => :delete,
+            :parameters => [
+              { :name => :job_id, :aliases => [ :id ], :send_in => :path },
+              :reason
+            ]
+          }.merge(options)
+        )
+        process_request(_request)
+      end
+
+      # @see http://apidoc.vidispine.com/4.2/ref/job.html#get-job-information
+      def job_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'job/#{arguments[:job_id]}',
+            :parameters => [
+              { :name => :job_id, :aliases => [ :id ], :send_in => :path },
+              :metadata
+            ]
+          }
+        )
+        process_request(_request)
+      end
+
+      # @see http://apidoc.vidispine.com/4.2/ref/job.html#get-list-of-jobs
+      def jobs_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'job',
+            :parameters => [
+              { :name => :jobmetadata, :send_in => :query },
+              { :name => :metadata, :send_in => :query },
+              { :name => :idOnly, :send_in => :query },
+              { :name => 'starttime-from', :send_in => :query },
+              { :name => 'starttime-to', :send_in => :qeury },
+              { :name => :step, :send_in => :query },
+
+              { :name => :type, :send_in => :matrix },
+              { :name => :state, :send_in => :matrix },
+              { :name => :first, :send_in => :matrix },
+              { :name => :number, :send_in => :matrix },
+              { :name => :sort, :send_in => :matrix },
+              { :name => :user, :send_in => :matrix }
+            ]
+          }.merge(options)
+        )
+        process_request(_request)
+      end
+      alias :jobs :jobs_get
+
       def metadata_field_terse_schema(args = { }, options = { })
         default_options = { :headers => { 'accept' => '*/*' } }
         _options = options.merge(default_options)
