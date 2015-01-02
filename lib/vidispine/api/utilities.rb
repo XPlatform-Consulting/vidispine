@@ -6,9 +6,26 @@ module Vidispine
 
     class Utilities < Client
 
-      def storage_get_by_path(args = { }, options = { })
-
-      end
+      # Converts hash keys to symbols
+      #
+      # @param [Hash] value hash
+      # @param [Boolean] recursive Will recurse into any values that are hashes
+      def symbolize_keys (value, recursive = true)
+        case value
+          when Hash
+            new_val = {}
+            value.each { |k,v|
+              k = (k.to_sym rescue k)
+              v = symbolize_keys(v, true) if recursive and (v.is_a? Hash or v.is_a? Array)
+              new_val[k] = v
+            }
+            return new_val
+          when Array
+            return value.map { |v| symbolize_keys(v, true) }
+          else
+            return value
+        end
+      end # symbolize_keys
 
       # @param [Hash] args
       # @option args [String] :file_path (Required)
@@ -20,6 +37,7 @@ module Vidispine
       # @option args [Integer] :file_path_collection_name_position Required if :collection_id or :collection_name is not set
       # @option args [Hash] :placeholder_args ({ :container => 1, :video => 1 })
       def collection_file_add_using_path(args = { }, options = { })
+        args = symbolize_keys(args, false)
         _response = { }
 
         # 1. Receive a File Path
@@ -124,9 +142,6 @@ module Vidispine
         # Item was already in the system so exit here
         return _response unless file
 
-        # file_uri = file['uri'].first
-        # raise "File URI Not Found. #{file.inspect}" unless file_uri
-
         file_id = file['id']
         raise "File Id Not Found. #{file.inspect}" unless file_id
 
@@ -134,6 +149,11 @@ module Vidispine
         logger.debug { 'Adding the file as the Original Shape.' }
         item_shape_import_response = item_shape_import(:item_id => item_id, :file_id => file_id, :tag => 'original')
         _response[:item_shape_import] = item_shape_import_response
+
+        job_id = item_shape_import_response['jobId']
+        wait_for_job_completion(:job_id => job_id) { |env|
+          logger.debug { "Waiting for Item Shape Import Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
+        }
 
         # 7. Generate the Transcode of the item
         transcode_tag = args[:transcode_tag] || 'lowres'
@@ -144,7 +164,7 @@ module Vidispine
         # 8. Generate the Thumbnails and Poster Frame
         create_thumbnails = args.fetch(:create_thumbnails, true)
         create_posters = args[:create_posters] || 3
-        logger.debug { 'Generating Thumbnails(s) and Poster Frame.'}
+        logger.debug { 'Generating Thumbnails(s) and Poster Frame.' }
         item_thumbnail_response = item_thumbnail(:item_id => item_id, :createThumbnails => create_thumbnails, :createPosters => create_posters)
         _response[:item_thumbnail] = item_thumbnail_response
 
@@ -315,6 +335,50 @@ module Vidispine
           }.merge(options)
         )
         process_request(_request)
+      end
+
+      # @param [Hash] args
+      # @option args [String] :job_id (Required)
+      # @option args [Integer] :delay (15)
+      # @option args [Integer] :timeout The timeout in seconds
+      def wait_for_job_completion(args = { })
+        job_id = args[:job_id]
+        raise ArgumentError, 'job_id is a required argument.' unless job_id
+        delay = args[:delay] || 15
+
+        timeout = args[:timeout]
+        time_started = Time.now
+
+        _response = { }
+        continue_monitoring = true
+        timed_out = false
+        loop do
+          _response = job_get(:job_id => job_id)
+          break unless _response
+
+          job_status = _response['status']
+          break if %w(FINISHED FINISHED_WARNING FINISHED_TOTAL ABORTED).include?(job_status)
+
+          break if timeout and (timed_out = ((Time.now - time_started) > timeout))
+
+          if block_given?
+            yield_out = {
+              :time_started => time_started,
+              :latest_response => _response,
+              :job_status => job_status,
+              :continue_monitoring => continue_monitoring,
+              :delay => delay
+            }
+            yield yield_out
+            break unless continue_monitoring
+          else
+            logger.debug { "Waiting for job completion. Job: #{job_status}" }
+          end
+
+          sleep(delay)
+        end
+
+        { :last_response => _response, :time_started => time_started, :timed_out => timed_out }
       end
 
       # Utilities
