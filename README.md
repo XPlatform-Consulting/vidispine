@@ -20,7 +20,6 @@ Or install it yourself using the specific_install gem:
 
     Usage:
         vidispine -h | --help
-        vidispine --method-name <method name> --method-arguments <method arguments>
 
     Options:
             --host-address HOSTADDRESS   The address of the server to communicate with.
@@ -29,10 +28,14 @@ Or install it yourself using the specific_install gem:
                                           default: 8080
             --username USERNAME          The account username to authenticate with.
             --password PASSWORD          The account password to authenticate with.
-            --accepts-header VALUE       The value for the Accepts header sent in each request.
+            --accept-header VALUE        The value for the Accept header sent in each request.
                                           default: application/json
+            --content-type VALUE         The value for the Content-Type header sent in each request.
+                                          default: application/json; charset=utf-8
             --method-name METHODNAME     The name of the method to call.
             --method-arguments JSON      The arguments to pass when calling the method.
+            --storage-map JSON           A map of file paths to storage ids to use in utility methods.
+            --metadata-map JSON          A map of field aliases to field names to use in utility methods.
             --pretty-print               Will format the output to be more human readable.
             --log-to FILENAME            Log file location.
                                           default: STDERR
@@ -143,6 +146,18 @@ Or install it yourself using the specific_install gem:
 
   TODO: ADD EXAMPLE
 
+#### [job_abort](http://apidoc.vidispine.com/4.2/ref/job.html#abort-job)
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name job_abort --method-arguments '{"job_id":"VX-1"}'
+
+#### [job_get](http://apidoc.vidispine.com/4.2/ref/job.html#get-job-information)
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name job_get --method-arguments '{"job_id":"VX-1"}'
+
+#### [jobs_get](http://apidoc.vidispine.com/4.2/ref/job.html#get--job)
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name jobs_get
+
 #### [storage_delete](http://apidoc.vidispine.com/4.2/ref/storage/storage.html#delete--storage-\(storage-id\))
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name storage_delete --method-arguments '{"storage_id":"VX-1"}'
@@ -177,6 +192,14 @@ Or install it yourself using the specific_install gem:
     Get All Matches
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_get_by_name --method-arguments '[{"collection_name":"SomeName"},{"return_first_match":false}]'
 
+#### item_add_using_file_path_metadata
+
+    Find/Create Item
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_add_using_file_path_metadata --method-arguments '{"storage_path_map":{"/Volumes/storages/media1":"VX-1"},"metadata_file_path_field_id":"portal_mf48881","file_path":"/Volumes/storages/media1/MyCollectionName/test12_original.mp4"}'
+
+    Find/Create Item and Add Item to Collection
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_add_using_file_path_metadata --method-arguments '{"storage_path_map":{"/Volumes/storages/media1":"VX-1"},"metadata_file_path_field_id":"portal_mf48881","file_path":"/Volumes/storages/media1/MyCollectionName/test12_original.mp4","add_item_to_collection":true,"file_path_collection_name_position":4}'
+
 #### item_create_with_proxy_using_storage_file_paths
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_create_with_proxy_using_storage_file_paths --method-arguments '{"storage_id":"VX-1","original_file_path":"test_original.mp4","lowres_file_path":"test_lowres.mp4"}'
@@ -188,6 +211,48 @@ Or install it yourself using the specific_install gem:
 #### item_annotation_get
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_annotation_get --method-arguments '{"item_id":"VX-1"}'
+
+## Vidispine API Utilities HTTP Server Executable [bin/vidispine-utilities-http-server](../bin/vidispine-utilities-http-server)
+
+### Usage
+
+    Usage:
+        vidispine-utilities-http-server -h | --help
+        vidispine-utilities-http-server [start stop restart status]
+
+    Options:
+            --vidispine-http-host-address HOSTADDRESS
+                                         The address of the server to communicate with.
+                                          default: localhost
+            --vidispine-http-host-port HOSTPORT
+                                         The port to use when communicating with the server.
+                                          default: 8080
+            --vidispine-username USERNAME
+                                         The account username to authenticate with.
+                                          default: admin
+            --vidispine-password PASSWORD
+                                         The account password to authenticate with.
+                                          default: password
+            --storage-path-map MAP       A path=>storage-id mapping to match incoming file paths to storages.
+            --relative-file-path-collection-name-position NUM
+                                         The relative position from the storage base path in which to select the collection name.
+                                          default: 0
+            --metadata-file-path-field-id ID
+                                         The Id of the metadata field where the file path is to be stored.
+            --port PORT                  The port to bind to.
+                                          default: 4567
+            --log-to FILENAME            Log file location.
+                                          default: STDERR
+            --log-level LEVEL            Logging level. Available Options: info, fatal, error, warn, debug
+                                          default: error
+            --[no-]options-file [FILENAME]
+                                         Path to a file which contains default command line arguments.
+                                          default: /Users/jw/.options/vidispine-utilities-http-server
+        -h, --help                       Display this message.
+
+#### SOME EXAMPLE
+
+    vidispine-utilities-http-server --storage-path-map '{"/Volumes/storages/media1":"VX-1"}' --metadata-file-path-field-id 'portal_mf48881'
 
 ## Contributing
 
