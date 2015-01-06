@@ -6,10 +6,19 @@ module Vidispine
 
     class Utilities < Client
 
+      attr_accessor :default_metadata_map, :default_storage_map
+
+      def initialize(args = { })
+        @default_storage_map = args[:storage_map] || { }
+        @default_metadata_map = args[:metadata_map] || { }
+
+        super
+      end
+
       # Converts hash keys to symbols
       #
       # @param [Hash] value hash
-      # @param [Boolean] recursive Will recurse into any values that are hashes
+      # @param [Boolean] recursive Will recurse into any values that are hashes or arrays
       def symbolize_keys (value, recursive = true)
         case value
           when Hash
@@ -27,16 +36,100 @@ module Vidispine
         end
       end # symbolize_keys
 
-      # @param [Hash] args
-      # @option args [String] :file_path (Required)
-      # @option args [String] :metadata_file_path_field_id (Required)
-      # @option args [Hash] :storage_path_map (Required)
-      # @option args [Integer] :storage_file_get_delay
-      # @option args [String] :collection_id Required if :collection_name or :file_path_collection_name_position is not set
-      # @option args [String] :collection_name Required if :collection_id or :file_path_collection_name_position is not set
-      # @option args [Integer] :file_path_collection_name_position Required if :collection_id or :collection_name is not set
-      # @option args [Hash] :placeholder_args ({ :container => 1, :video => 1 })
-      def collection_file_add_using_path(args = { }, options = { })
+      # @param [Hash] :collection
+      # @param [String] :collection_id
+      # @param [String] :collection_name
+      def determine_collection(args, options = { })
+        collection = args[:collection] || { }
+
+        # 3 Get Collection
+        collection_id = args[:collection_id] || collection['id']
+        unless collection_id
+          collection_name = args[:collection_name]
+          unless collection_name
+            file_path_collection_name_position = args[:file_path_collection_name_position]
+            raise ArgumentError, ':collection_id, :collection_name, or :file_path_collection_name_position argument is required.' unless file_path_collection_name_position
+
+            file_path = args[:file_path]
+            raise ArgumentError, ':file_path is a required argument when using :file_path_collection_name_position' unless file_path
+
+            file_path_split = (file_path.start_with?('/') ? file_path[1..-1] : file_path).split('/')
+            collection_name = file_path_split[file_path_collection_name_position]
+            raise ArgumentError, 'Unable to determine collection name from path.' unless collection_name
+            logger.debug { "Using '#{collection_name}' as collection_name. File Path Array: #{file_path_split.inspect}" }
+          end
+          # Determine Collection
+          #collection = collection_create_if_not_exists(:collection_name => collection_name)
+          collection = collection_get_by_name({ :collection_name => collection_name }, options)
+        else
+          collection ||= collection_get(:collection_id => collection_id)
+          raise ArgumentError, 'Collection not found.' unless collection and collection['id']
+        end
+        collection
+      end
+
+      # Adds an Item to a Collection but Gives Multiple ways of Determining the Collection
+      # @param [Hash] :item
+      # @param [Hash] :collection
+      # @param [String] :collection_id
+      # @param [String] :collection_name
+      # @param [String] :file_path Required if using :file_path_collection_name_position
+      # @param [Integer] :file_path_collection_name_position
+      def collection_item_add_extended(args = { }, options = { })
+        _response = { }
+
+        item = args[:item] || { }
+        item_id = args[:item_id] || item['id']
+
+        # # 3 Get Collection
+        # collection_id = args[:collection_id] || collection['id']
+        # unless collection_id
+        #   collection_name = args[:collection_name]
+        #   unless collection_name
+        #     file_path_collection_name_position = args[:file_path_collection_name_position]
+        #     raise ArgumentError, ':collection_id, :collection_name, or :file_path_collection_name_position argument is required.' unless file_path_collection_name_position
+        #
+        #     file_path_split = (file_path.start_with?('/') ? file_path[1..-1] : file_path).split('/')
+        #     collection_name = file_path_split[file_path_collection_name_position]
+        #     raise ArgumentError, 'Unable to determine collection name from path.' unless collection_name
+        #     logger.debug { "Using '#{collection_name}' as collection_name. File Path Array: #{file_path_split.inspect}" }
+        #   end
+        #   # Determine Collection
+        #   collection = collection_create_if_not_exists(:collection_name => collection_name)
+        #   collection_id = collection['id']
+        # else
+        #   collection ||= collection_get(:collection_id => collection_id)
+        #   raise ArgumentError, 'Collection not found.' unless collection
+        # end
+        collection = determine_collection(args)
+        _response[:collection] = collection
+        collection_id = collection['id']
+        #return
+
+        # 5. Add Item to the Collection
+        logger.debug { 'Adding Item to Collection.' }
+        collection_object_add_response = collection_object_add(:collection_id => collection_id, :object_id => item_id)
+        _response[:collection_object_add] = collection_object_add_response
+
+        _response
+      end
+
+      # Transforms metadata from key value to field format
+      # { k1 => v1, k2 => v2} becomes [ { :name => k1, :value => [ { :value => v1 } ] }, { :name => k2, :value => [ { :value => v2 } ] } ]
+      def transform_metadata_to_fields(metadata_in, options = { })
+        _metadata_map = default_metadata_map.merge(options[:metadata_map] || { })
+        metadata_in.map { |k,v| { :name => (_metadata_map[k] || k), :value => [ { :value => v } ] } }
+      end
+
+      # Add an item to the system using file path metadata field as the key
+      # 1. Search for pre existing asset
+      # 2. Create a placeholder with metadata (if asset doesn't exist)
+      # 3. Create an original shape.
+      # 4. Poll the Job status of the shape creation
+      # 5. Trigger the Transcode of the Proxy, thumbnails
+      # 6. Trigger the Transcode of the thumbnail.
+      # 7. Trigger the Transcode of the poster frame
+      def item_add_using_file_path_metadata(args = { }, options = { })
         args = symbolize_keys(args, false)
         _response = { }
 
@@ -46,8 +139,6 @@ module Vidispine
 
         metadata_file_path_field_id = args[:metadata_file_path_field_id]
         raise ArgumentError, ':metadata_file_path_field_id is a required argument.' unless metadata_file_path_field_id
-
-        storage_file_get_delay = args[:storage_file_get_delay] || 10
 
         # 2. Determine Storage ID
         storage_path_map = args[:storage_path_map]
@@ -64,6 +155,132 @@ module Vidispine
 
         storage = storage_get(:id => storage) if storage.is_a?(String)
         _response[:storage] = storage
+        raise 'Error Retrieving Storage Record. Storage Id: #{' unless storage
+
+        storage_id = storage['id']
+        storage_uri_raw = storage['method'].first['uri']
+        storage_uri = URI.parse(storage_uri_raw)
+
+        vidispine_file_path = File.join(storage_uri.path, file_path_relative_to_storage_path)
+        logger.debug { "Vidispine File Path: '#{vidispine_file_path}'" }
+        _response[:vidispine_file_path] = vidispine_file_path
+
+        _metadata = args[:metadata] || { }
+        _metadata[metadata_file_path_field_id] ||= vidispine_file_path
+
+        # map metadata assuming 1 value per field
+        _metadata_as_fields = transform_metadata_to_fields(_metadata, args)
+
+        # 4.1 Search for Item using File Path
+        search_response = search(:content => 'metadata', :item_search_document => { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ] } ) || { 'entry' => [ ] }
+        _response[:search] = search_response
+
+        item = (search_response['entry'].first || { })['item']
+        unless item
+          # If the item wasn't found then get the file id for the file
+          # 4.1 Search for the storage file record
+          storage_file_get_response = storage_file_get(:storage_id => storage_id, :path => file_path_relative_to_storage_path) || { 'file' => [ ] }
+          raise "Error Getting Storage File. '#{response.inspect}'" unless storage_file_get_response and storage_file_get_response['id']
+          file = storage_file_get_response['file'].first
+          _response[:storage_file_get_response] = storage_file_get_response
+
+          unless file
+            # 4.1.1 Create the storage file record if it does not exist
+            file = storage_file_create_response = storage_file_create(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :state => 'CLOSED')
+            raise "Error Creating File on Storage. Response: #{response}" unless file
+            _response[:storage_file_create_response] = storage_file_create_response
+          end
+
+          # 4.2 Create a Placeholder
+          logger.debug { 'Creating Placeholder.' }
+          #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
+          placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => _metadata_as_fields, :start => '-INF', :end => '+INF' } ] } }
+          item = placeholder = import_placeholder(placeholder_args)
+          _response[:placeholder] = placeholder
+        end
+        _response[:item] = item
+        item_id = item['id']
+
+        if options[:add_item_to_collection]
+          logger.debug { 'Determining Collection to Add the Item to.' }
+          collection = determine_collection(args, options)
+          _response[:collection] = collection
+          collection_id = collection['id']
+
+          logger.debug { 'Adding Item to Collection.' }
+          collection_object_add_response = collection_object_add(:collection_id => collection_id, :object_id => item_id)
+          _response[:collection_object_add] = collection_object_add_response
+        end
+
+        # Item was already in the system so exit here
+        return _response unless file
+
+        file_id = file['id']
+        raise "File Id Not Found. #{file.inspect}" unless file_id
+
+        # 6. Add the file as the original shape
+        logger.debug { 'Adding the file as the Original Shape.' }
+        item_shape_import_response = item_shape_import(:item_id => item_id, :file_id => file_id, :tag => 'original')
+        _response[:item_shape_import] = item_shape_import_response
+
+        job_id = item_shape_import_response['jobId']
+        job_monitor_response = wait_for_job_completion(:job_id => job_id) { |env|
+          logger.debug { "Waiting for Item Shape Import Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
+        }
+        last_response = job_monitor_response[:last_response]
+        raise "Error Adding file As Original Shape. Response: #{last_response.inspect}" unless last_response['status'] == 'FINISHED'
+
+        # 7. Generate the Transcode of the item
+        transcode_tag = args[:transcode_tag] || 'lowres'
+        logger.debug { 'Generating Transcode of the Item.' }
+        item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
+        _response[:item_transcode] = item_transcode_response
+
+        # 8. Generate the Thumbnails and Poster Frame
+        create_thumbnails = args.fetch(:create_thumbnails, true)
+        create_posters = args[:create_posters] || 3
+        logger.debug { 'Generating Thumbnails(s) and Poster Frame.' }
+        item_thumbnail_response = item_thumbnail(:item_id => item_id, :createThumbnails => create_thumbnails, :createPosters => create_posters)
+        _response[:item_thumbnail] = item_thumbnail_response
+
+        _response
+      end
+
+      # @param [Hash] args
+      # @option args [String] :file_path (Required)
+      # @option args [String] :metadata_file_path_field_id (Required)
+      # @option args [Hash] :storage_path_map (Required)
+      # @option args [String] :collection_id Required if :collection_name or :file_path_collection_name_position is not set
+      # @option args [String] :collection_name Required if :collection_id or :file_path_collection_name_position is not set
+      # @option args [Integer] :file_path_collection_name_position Required if :collection_id or :collection_name is not set
+      # @option args [Hash] :placeholder_args ({ :container => 1, :video => 1 })
+      def collection_file_add_using_path(args = { }, options = { })
+        args = symbolize_keys(args, false)
+        _response = { }
+
+        # 1. Receive a File Path
+        file_path = args[:file_path]
+        raise ArgumentError, ':file_path is a required argument.' unless file_path
+
+        metadata_file_path_field_id = args[:metadata_file_path_field_id]
+        raise ArgumentError, ':metadata_file_path_field_id is a required argument.' unless metadata_file_path_field_id
+
+        # 2. Determine Storage ID
+        storage_path_map = args[:storage_path_map]
+        raise ArgumentError, ':storage_path_map is a required argument.' unless storage_path_map
+
+        # Make sure the keys are strings
+        storage_path_map = Hash[storage_path_map.map { |k,v| [k.to_s, v] }] if storage_path_map.is_a?(Hash)
+
+        volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path) }
+        raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
+
+        file_path_relative_to_storage_path = file_path.sub(volume_path, '')
+        logger.debug { "File Path Relative to Storage Path: #{file_path_relative_to_storage_path}" }
+
+        storage = storage_get(:id => storage) if storage.is_a?(String)
+        _response[:storage] = storage
+        raise 'Error Retrieving Storage Record. Storage Id: #{' unless storage
 
         storage_id = storage['id']
         storage_uri_raw = storage['method'].first['uri']
@@ -78,7 +295,7 @@ module Vidispine
         unless collection_id
           collection_name = args[:collection_name]
           unless collection_name
-            file_path_collection_name_position = args[:relative_file_path_collection_name_position]
+            file_path_collection_name_position = args[:file_path_collection_name_position]
             raise ArgumentError, ':collection_id, :collection_name, or :file_path_collection_name_position argument is required.' unless file_path_collection_name_position
 
             file_path_split = (file_path_relative_to_storage_path.start_with?('/') ? file_path_relative_to_storage_path[1..-1] : file_path_relative_to_storage_path).split('/')
@@ -102,24 +319,21 @@ module Vidispine
 
         item = (search_response['entry'].first || { })['item']
         unless item
-          # 4.2 Trigger a Storage Rescan
-          logger.debug { 'Forcing Storage Rescan.' }
-          storage_rescan( :storage_id => storage_id )
+          # If the item wasn't found then get the file id for the file
+          # 4.1 Search for the storage file record
+          storage_file_get_response = storage_file_get(:storage_id => storage_id, :path => file_path_relative_to_storage_path) || { 'file' => [ ] }
+          raise "Error Getting Storage File. '#{response.inspect}'" unless response
+          file = storage_file_get_response['file'].first
+          _response[:storage_file_get_response] = storage_file_get_response
 
-          # 4.3 Wait for the file to appear on the storage
-          logger.debug { 'Getting File Using Path.' }
-          file = nil
-          until file
-            storage_file_get_response = storage_file_get(:storage_id => storage_id, :path => file_path_relative_to_storage_path) || { 'file' => [ ] }
-            raise "Error Getting Storage File. '#{response.inspect}'" unless response
-
-            file = storage_file_get_response['file'].first
-            sleep(storage_file_get_delay) unless file
+          unless file
+            # 4.1.1 Create the storage file record if it does not exist
+            file = storage_file_create_response = storage_file_create(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :state => 'CLOSED')
+            raise "Error Creating File on Storage. Response: #{response}" unless file
+            _response[:storage_file_create_response] = storage_file_create_response
           end
-          _response[:storage_file_get] = storage_file_get_response
-          _response[:file] = file
 
-          # 4.4 Create the Placeholder
+          # 4.2 Create a Placeholder
           logger.debug { 'Creating Placeholder.' }
           placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
           item = placeholder = import_placeholder(placeholder_args)
@@ -131,6 +345,7 @@ module Vidispine
         #
         #   file = response['file'].first
         end
+
         _response[:item] = item
         item_id = item['id']
 
@@ -151,9 +366,11 @@ module Vidispine
         _response[:item_shape_import] = item_shape_import_response
 
         job_id = item_shape_import_response['jobId']
-        wait_for_job_completion(:job_id => job_id) { |env|
+        job_monitor_response = wait_for_job_completion(:job_id => job_id) { |env|
           logger.debug { "Waiting for Item Shape Import Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
         }
+        last_response = job_monitor_response[:last_response]
+        raise "Error Adding file As Original Shape. Response: #{last_response.inspect}" unless last_response['status'] == 'FINISHED'
 
         # 7. Generate the Transcode of the item
         transcode_tag = args[:transcode_tag] || 'lowres'
@@ -182,8 +399,11 @@ module Vidispine
         case_sensitive = options.fetch(:case_sensitive, true)
 
         collection = collection_get_by_name( :collection_name => collection_name, :case_sensitive => case_sensitive )
+        collection_already_existed = collection ? true : false
         collection ||= collection_create(collection_name)
-        collection
+        options[:extended_response] ?
+            { :collection => collection, :collection_already_existed => collection_already_existed } :
+            collection
       end
 
       # Searches for a collection by name

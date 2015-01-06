@@ -29,6 +29,7 @@ module Vidispine
       end
 
       # Exposes HTTP Methods
+      # @example http(:get, '/')
       def http(method, *args)
         @request = nil
         @response = http_client.send(method, *args)
@@ -108,7 +109,7 @@ module Vidispine
             ],
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :collection_item_add :collection_object_add
 
@@ -127,27 +128,26 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :collection_item_remove :collection_object_remove
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#rename-a-collection
       # @param [Hash] args
       # @option args [String] :collection_id
-      def collection_rename(args = { })
-        _data = Requests::BaseRequest.process_parameters(
-          [
-            { :name => :collection_id, :aliases => [ :id ], :send_in => :path },
-            { :name => :name, :aliases => [ :collection_name ] },
-          ],
-          args
+      def collection_rename(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_method => :put,
+            :http_path => 'collection/#{arguments[:collection_id]}/rename',
+            :parameters => [
+              { :name => :collection_id, :aliases => [ :id ], :send_in => :path },
+              { :name => :name, :aliases => [ :collection_name ] },
+            ]
+          }.merge(options)
         )
-        _args = _data[:arguments_out]
-
-        collection_id = CGI.escape(_args[:collection_id])
-        name = _args[:name]
-
-        http(:put, "collection/#{collection_id}/rename", '', :query => { :name => name }, :headers => { 'Content-Type' => 'text/plain' } )
+        return http(:put, _request.path, '', :query => _request.query_arguments, :headers => { 'Content-Type' => 'text/plain' } )
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#retrieve-a-list-of-all-collections
@@ -213,7 +213,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :item :item_get
 
@@ -242,7 +242,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/item/shape.html#get-files-for-shape
@@ -258,7 +258,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :item_shape_files :item_shape_files_get
 
@@ -281,7 +281,7 @@ module Vidispine
         #     ],
         #   }.merge(options)
         # )
-        # process_request(_request)
+        # process_request(_request, options)
 
         _data = Requests::BaseRequest.process_parameters(
           [
@@ -350,7 +350,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
 
         # @see http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job
@@ -374,7 +374,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :item_uri_get :item_uris_get
       alias :item_uris :item_uris_get
@@ -402,7 +402,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :items :items_get
 
@@ -429,7 +429,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/job.html#delete--job-(job-id)
@@ -445,7 +445,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/job.html#get-job-information
@@ -460,7 +460,7 @@ module Vidispine
             ]
           }
         )
-        process_request(_request)
+        process_request(_request, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/job.html#get-list-of-jobs
@@ -486,16 +486,51 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :jobs :jobs_get
 
-      def metadata_field_terse_schema(args = { }, options = { })
-        default_options = { :headers => { 'accept' => '*/*' } }
-        _options = options.merge(default_options)
-        http(:get ,'metadata-field/terse-schema', _options)
+      # @see http://apidoc.vidispine.com/4.2/ref/metadata/field.html#delete--metadata-field-(field-name)
+      def metadata_field_delete(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'metadata/#{arguments[:field_name]}',
+            :http_method => :delete,
+            :parameters => [
+              { :name => :field_name, :aliases => [ :name ], :send_in => :path }
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
       end
 
+      # @see http://apidoc.vidispine.com/4.2/ref/metadata/field.html#get--metadata-field-(field-name)
+      def metadata_field_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'metadata/#{arguments[:field_name]}',
+            :parameters => [
+              { :name => :field_name, :aliases => [ :name ], :send_in => :path }
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
+      # @see http://apidoc.vidispine.com/4.2/ref/metadata/field.html#retrieve-terse-metadata-schema
+      def metadata_field_terse_schema(args = { }, options = { })
+        default_options = { :headers => { 'accept' => '*/*' } }
+        _options = default_options.merge(options)
+        http(:get, 'metadata-field/terse-schema', _options)
+      end
+
+      # @see http://apidoc.vidispine.com/4.2/ref/metadata/field.html#get--metadata-field
+      def metadata_fields_get(args = { }, options = { })
+        http(:get, 'metadata-field', options)
+      end
+      alias :metadata_fields :metadata_fields_get
 
       # @see http://apidoc.vidispine.com/latest/ref/search.html#id2
       # @example search(:content => :metadata, :field => :title, :item_search_document => { :field => [ { :name => 'title', :value => [ { :value => 'something' } ] } ] } )
@@ -534,7 +569,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#delete--storage-(storage-id)
@@ -551,7 +586,53 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
+      end
+
+      
+      def storage_file_copy(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args, 
+          {
+            :http_path => 'storage/#{path_arguments[:source_storage_id]}/file/#{path_argumetns[:file_id]}/storage/#{path_arguments[:target_source_id]}',
+            :http_method => :post,
+            :parameters => [
+              { :name => :file_id, :send_in => :path, :required => true },
+              { :name => :source_storage_id, :send_in => :path, :required => true },
+              { :name => :target_storage_id, :send_in => :path, :required => true },
+              
+              :move,
+              :filename,
+              :timeDependency,
+              :limitRate,
+              :notification,
+              :notificationData,
+              :priority,
+              :jobmetadata
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+      
+      # @note UNDOCUMENTED METHOD
+      def storage_file_create(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'storage/#{path_arguments[:storage_id]}/file',
+            :http_method => :post,
+            :parameters => [
+              { :name => :storage_id, :send_in => :path, :required => true },
+
+              :createOnly,
+              :state,
+
+              { :name => :path, :send_in => :body }
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/storage/file.html#list-files-in-storage
@@ -571,7 +652,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :storage :storage_get
 
@@ -593,7 +674,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#rescanning
@@ -625,7 +706,7 @@ module Vidispine
             ]
           }.merge(options)
         )
-        process_request(_request)
+        process_request(_request, options)
       end
       alias :storages :storages_get
 
