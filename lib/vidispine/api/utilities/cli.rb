@@ -28,6 +28,8 @@ module Vidispine
           argument_parser.on('--content-type VALUE', 'The value for the Content-Type header sent in each request.', "\tdefault: #{default_content_type_header}") { |v| arguments[:content_type] = v }
           argument_parser.on('--method-name METHODNAME', 'The name of the method to call.') { |v| arguments[:method_name] = v }
           argument_parser.on('--method-arguments JSON', 'The arguments to pass when calling the method.') { |v| arguments[:method_arguments] = v }
+          argument_parser.on('--storage-map JSON', 'A map of file paths to storage ids to use in utility methods.') { |v| arguments[:storage_map] = v }
+          argument_parser.on('--metadata-map JSON', 'A map of field aliases to field names to use in utility methods.') { |v| arguments[:metadata_map] = v }
           argument_parser.on('--pretty-print', 'Will format the output to be more human readable.') { |v| arguments[:pretty_print] = v }
 
           argument_parser.on('--log-to FILENAME', 'Log file location.', "\tdefault: #{log_to_as_string}") { |v| arguments[:log_to] = v }
@@ -49,6 +51,12 @@ module Vidispine
         end
 
         def run(args = arguments, opts = options)
+          storage_map = args[:storage_map]
+          @api.default_storage_map = JSON.parse(storage_map) if storage_map.is_a?(String)
+
+          metadata_map = args[:metadata_map]
+          @api.default_metadata_map = JSON.parse(metadata_map) if metadata_map.is_a?(String)
+
           method_name = args[:method_name]
           send(method_name, args[:method_arguments], :pretty_print => args[:pretty_print]) if method_name
 
@@ -98,7 +106,6 @@ module Vidispine
           end
           # send
         end
-
 
         def prettify_json(json)
           JSON.pretty_generate(JSON.parse(json))
