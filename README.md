@@ -6,6 +6,7 @@
 Execute the following:
 
     $ yum install -y ruby ruby-devel rubygems bundler git 
+    $ gem install bundler
     $ git clone https://github.com/XPlatform-Consulting/vidispine.git
     $ cd vidispine
     $ bundle
