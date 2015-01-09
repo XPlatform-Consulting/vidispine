@@ -9,7 +9,7 @@ Execute the following:
     $ gem install bundler
     $ git clone https://github.com/XPlatform-Consulting/vidispine.git
     $ cd vidispine
-    $ bundle
+    $ bundle update
 
 Or install it yourself using the specific_install gem:
 
@@ -216,6 +216,10 @@ Or install it yourself using the specific_install gem:
 
 ## Vidispine API Utilities HTTP Server Executable [bin/vidispine-utilities-http-server](../bin/vidispine-utilities-http-server)
 
+### Configuration
+    Create a Vidispine HTTP Server options files
+    vi /homefolderofuser/.options/vidispine-utilities-http-server
+
 ### Usage
 
     Usage:
@@ -249,7 +253,7 @@ Or install it yourself using the specific_install gem:
                                           default: error
             --[no-]options-file [FILENAME]
                                          Path to a file which contains default command line arguments.
-                                          default: /Users/jw/.options/vidispine-utilities-http-server
+                                          default: /homefolderofuser/.options/vidispine-utilities-http-server
         -h, --help                       Display this message.
 
 #### SOME EXAMPLE
