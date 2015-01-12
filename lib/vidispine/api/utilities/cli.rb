@@ -95,7 +95,8 @@ module Vidispine
               elsif _response_cleaned.start_with?('<') and _response_cleaned.end_with?('>')
                 puts prettify_xml(response)
               else
-                pp response.is_a?(String) ? response : JSON.pretty_generate(response) rescue response
+                #pp response.is_a?(String) ? response : JSON.pretty_generate(response) rescue response
+                puts response.is_a?(String) ? response : JSON.pretty_generate(response) rescue response
               end
             else
               pp response.is_a?(String) ? response : JSON.pretty_generate(response) rescue response
