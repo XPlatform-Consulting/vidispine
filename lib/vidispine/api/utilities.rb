@@ -598,7 +598,8 @@ module Vidispine
           storage = storage_get(:id => storage) if storage.is_a?(String)
           raise 'Error Retrieving Storage Record. Storage Id: #{' unless storage
 
-          # storage_id = storage['id']
+          storage_id = storage['id']
+          _args[:storage_id] = storage_id
           storage_uri_raw = storage['method'].first['uri']
           storage_uri = URI.parse(storage_uri_raw)
 
@@ -608,6 +609,7 @@ module Vidispine
 
           glob_path = dir.end_with?('*') ? vidispine_dir_path : File.join(vidispine_dir_path, '*')
           paths = Dir.glob(glob_path)
+
 
           return paths.map do |local_absolute_path|
             logger.debug { "Found Path: '#{local_absolute_path}'" }
