@@ -1,12 +1,25 @@
 # Vidispine
 
-
 ## Installation
+
+### Pre-requisites
+
+  [git](http://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+  [ruby](https://www.ruby-lang.org/en/documentation/installation/)
+  rubygems
+  [bundler](http://bundler.io/#getting-started)
+
+#### Install Pre-requisites on CentOS
 
 Execute the following:
 
-    $ yum install -y ruby ruby-devel rubygems bundler git 
+    $ yum install -y git ruby ruby-devel rubygems
     $ gem install bundler
+
+### Install Using Git
+
+Execute the following:
+
     $ git clone https://github.com/XPlatform-Consulting/vidispine.git
     $ cd vidispine
     $ bundle update
