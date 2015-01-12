@@ -162,6 +162,10 @@ Or install it yourself using the specific_install gem:
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name storage_delete --method-arguments '{"storage_id":"VX-1"}'
 
+#### [storage_file_create](http://apidoc.vidispine.com/4.2/ref/storage/file.html)
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name storage_file_create --method-arguments '{"storage_id":"VX-1", "path":"filename.ext", "state":"closed"}'
+
 #### [storage_file_get](http://apidoc.vidispine.com/4.2/ref/storage/file.html)
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name storage_file_get --method-arguments '{"storage_id":"VX-1"}'
@@ -211,6 +215,12 @@ Or install it yourself using the specific_install gem:
 #### item_annotation_get
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_annotation_get --method-arguments '{"item_id":"VX-1"}'
+
+#### storage_file_create_extended
+Uses [Ruby Dir Glob Patterns](http://ruby-doc.org/core-1.8.7/Dir.html#method-c-glob) for the dir argument
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name storage_file_create_extended --method-arguments '{"storage_map":{"/srv/media1":"VX-1"}, "dir":"/srv/media1/SomeCollection", "state":"closed"}'
+
 
 ## Vidispine API Utilities HTTP Server Executable [bin/vidispine-utilities-http-server](../bin/vidispine-utilities-http-server)
 

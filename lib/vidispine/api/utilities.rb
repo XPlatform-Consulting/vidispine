@@ -36,6 +36,10 @@ module Vidispine
         end
       end # symbolize_keys
 
+      def find_storage_file_path(storage)
+
+      end
+
       # @param [Hash] :collection
       # @param [String] :collection_id
       # @param [String] :collection_name
@@ -555,6 +559,68 @@ module Vidispine
           }.merge(options)
         )
         process_request(_request)
+      end
+
+      def storage_file_copy_extended(args = { }, options = { })
+        _args = symbolize_keys(args, false)
+        _data = Requests::BaseRequest.process_parameters([ { :name => :use_source_filename }, { :name => :file_id }, { :name => :filename }, { :name => :source_storage_id } ], _args)
+        _args = _args.merge(_data[:arguments_out])
+
+        # Get the source file name and set it as the destination file name
+        if options[:use_source_filename]
+          file_id = _args[:file_id]
+          source_storage_id = _args[:source_storage_id]
+          file = storage_file_get(:storage_id => source_storage_id, :file_id => file_id)
+          args[:filename] = file[:filename]
+        end
+
+        storage_file_copy(args, options)
+      end
+
+      def storage_file_create_extended(args = { }, options = { })
+        _args = symbolize_keys(args, false)
+        _params = Requests::StorageFileCreate::PARAMETERS.concat [ { :name => :dir, :aliases => [ :directory ], :send_in => :none }, { :name => :storage_map, :send_in => :none } ]
+        _data = Requests::BaseRequest.process_parameters(_params, _args)
+        _args = _args.merge(_data[:arguments_out])
+
+        storage_path_map = _args.delete(:storage_map) { }
+        storage_path_map = Hash[storage_path_map.map { |k,v| [k.to_s, v] }] if storage_path_map.is_a?(Hash)
+
+        dir = _args.delete(:dir) { }
+        if dir
+          raise ArgumentError, ':storage_map is a required argument.' unless storage_path_map
+
+          volume_path, storage = storage_path_map.find { |path, _| dir.start_with?(path) }
+          raise "Unable to find match in storage path map for '#{dir}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
+
+          dir_path_relative_to_storage = dir.sub(volume_path, '')
+
+          storage = storage_get(:id => storage) if storage.is_a?(String)
+          raise 'Error Retrieving Storage Record. Storage Id: #{' unless storage
+
+          # storage_id = storage['id']
+          storage_uri_raw = storage['method'].first['uri']
+          storage_uri = URI.parse(storage_uri_raw)
+
+          vidispine_dir_path = File.join(storage_uri.path, dir_path_relative_to_storage)
+          logger.debug { "Vidispine Dir Path: '#{vidispine_dir_path}'" }
+
+
+          glob_path = dir.end_with?('*') ? vidispine_dir_path : File.join(vidispine_dir_path, '*')
+          paths = Dir.glob(glob_path)
+
+          return paths.map do |local_absolute_path|
+            logger.debug { "Found Path: '#{local_absolute_path}'" }
+            _path = local_absolute_path
+            file_path_relative_to_storage_path = _path.sub(volume_path, '')
+            logger.debug { "File Path Relative to Storage Path: #{file_path_relative_to_storage_path}" }
+
+            _args[:path] = file_path_relative_to_storage_path
+            storage_file_create(_args, options)
+          end
+        end
+
+        storage_file_create(_args, options)
       end
 
       # @param [Hash] args

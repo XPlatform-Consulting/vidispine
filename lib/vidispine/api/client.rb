@@ -615,7 +615,12 @@ module Vidispine
         process_request(_request, options)
       end
       
-      # @note UNDOCUMENTED METHOD
+      # @note UNDOCUMENTED API METHOD
+      # @param [Hash] args
+      # @option args [String] :storage_id (Required)
+      # @option args [String] :path (Required)
+      # @option args [Boolean] :create_only
+      # @option args [String] :state
       def storage_file_create(args = { }, options = { })
         _request = Requests::BaseRequest.new(
           args,
