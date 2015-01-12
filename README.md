@@ -5,9 +5,11 @@
 
 Execute the following:
 
+    $ yum install -y ruby ruby-devel rubygems bundler git 
+    $ gem install bundler
     $ git clone https://github.com/XPlatform-Consulting/vidispine.git
     $ cd vidispine
-    $ bundle
+    $ bundle update
 
 Or install it yourself using the specific_install gem:
 
@@ -224,6 +226,10 @@ Uses [Ruby Dir Glob Patterns](http://ruby-doc.org/core-1.8.7/Dir.html#method-c-g
 
 ## Vidispine API Utilities HTTP Server Executable [bin/vidispine-utilities-http-server](../bin/vidispine-utilities-http-server)
 
+### Configuration
+    Create a Vidispine HTTP Server options files
+    vi /homefolderofuser/.options/vidispine-utilities-http-server
+
 ### Usage
 
     Usage:
@@ -257,7 +263,7 @@ Uses [Ruby Dir Glob Patterns](http://ruby-doc.org/core-1.8.7/Dir.html#method-c-g
                                           default: error
             --[no-]options-file [FILENAME]
                                          Path to a file which contains default command line arguments.
-                                          default: /Users/jw/.options/vidispine-utilities-http-server
+                                          default: /homefolderofuser/.options/vidispine-utilities-http-server
         -h, --help                       Display this message.
 
 #### SOME EXAMPLE
