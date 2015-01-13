@@ -1,0 +1,13 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+if %w(start stop restart reload run zap status).include?((command = ARGV.first) ? command.downcase : command)
+  require 'daemons'
+  Daemons.run($0)
+  exit
+end
+
+lib_path = File.expand_path('../../lib', __FILE__)
+$:.unshift(lib_path) unless $:.include?(lib_path) or !File.exists?(lib_path)
+require 'vidispine/api/utilities/http_server/cli'
+
+Vidispine::API::Utilities::HTTPServer::CLI.run
