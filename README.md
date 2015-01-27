@@ -211,6 +211,10 @@ Or install it yourself using the specific_install gem:
     Get All Matches
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name collection_get_by_name --method-arguments '[{"collection_name":"SomeName"},{"return_first_match":false}]'
 
+#### item_add_using_file_path
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_add_using_file_path --method-arguments '{"storage_path_map":{"/Volumes/storages/media1":"VX-1"},"file_path":"someDirectory/someFile.mov"}'
+
 #### item_add_using_file_path_metadata
 
     Find/Create Item
@@ -222,10 +226,6 @@ Or install it yourself using the specific_install gem:
 #### item_create_with_proxy_using_storage_file_paths
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_create_with_proxy_using_storage_file_paths --method-arguments '{"storage_id":"VX-1","original_file_path":"test_original.mp4","lowres_file_path":"test_lowres.mp4"}'
-
-#### item_add_using_file_path
-
-    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_create_with_proxy_using_storage_file_paths --method-arguments '{"storage_path_map":{"/Volumes/storages/media1":"VX-1"},"file_path":"someDirectory/someFile.mov"}'
 
 #### item_annotation_create
 
