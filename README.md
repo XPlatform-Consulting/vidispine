@@ -223,6 +223,10 @@ Or install it yourself using the specific_install gem:
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_create_with_proxy_using_storage_file_paths --method-arguments '{"storage_id":"VX-1","original_file_path":"test_original.mp4","lowres_file_path":"test_lowres.mp4"}'
 
+#### item_add_using_file_path
+
+    vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_create_with_proxy_using_storage_file_paths --method-arguments '{"storage_path_map":{"/Volumes/storages/media1":"VX-1"},"file_path":"someDirectory/someFile.mov"}'
+
 #### item_annotation_create
 
     vidispine --host-address 127.0.0.1 --host-port 8080 --method-name item_annotation_create --method-arguments '{"item_id":"VX-1","inpoint":"00:00:00:00","outpoint":"00:00:00:01","title":"SomeTitle"}'
