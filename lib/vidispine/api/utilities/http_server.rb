@@ -18,7 +18,7 @@ module Vidispine
         end
 
         DEFAULT_ADDRESS_BINDING = 'localhost'
-        DEFAULT_PORT = '8080'
+        DEFAULT_PORT = '4567'
 
         attr_accessor :global_arguments,
                       :metadata_file_path_field_id,
@@ -157,7 +157,7 @@ module Vidispine
     IP:             #{_request.ip}
     User Agent:     #{_request.user_agent}
     Cookies:        #{_request.cookies}
-    Accepts:        #{_request.accept}
+    Accepts:        #{_request.accept.inspect}
     Preferred Type: #{_request.preferred_type}
 
     Media Type:     #{_request.media_type}
