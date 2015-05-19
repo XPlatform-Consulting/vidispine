@@ -19,6 +19,7 @@ module Vidispine
         @request = request
         request.client = self unless request.client
         options ||= request.options
+        logger.warn { "Request is Missing Required Arguments: #{request.missing_required_arguments.inspect}" } unless request.missing_required_arguments.empty?
         @response = http_client.call_method(request.http_method, { :path => request.path, :query => request.query, :body => request.body }, options)
       end
 
@@ -217,6 +218,10 @@ module Vidispine
       end
       alias :item :item_get
 
+      def item_notifications_delete
+        http(:delete, '/item/notification')
+      end
+
       # @see http://apidoc.vidispine.com/4.2/ref/metadata/metadata.html#get--item-(id)-metadata
       def item_metadata_get(args = { }, options = { })
         process_request_using_class(Requests::ItemMetadataGet, args, options)
@@ -225,24 +230,8 @@ module Vidispine
 
       # @see http://apidoc.vidispine.com/4.2/ref/metadata/metadata.html#add-a-metadata-change-set
       def item_metadata_set(args = { }, options = { })
-        _request = Requests::BaseRequest.new(
-          args,
-          {
-            :http_path => '/item/#{arguments[:item_id]}/metadata',
-            :http_method => :put,
-            :parameters => [
-              { :name => :item_id, :aliases => [ :id ], :required => true, :send_in => :path },
-
-              { :name => :projection, :send_in => :matrix },
-              { :name => 'output-project', :send_in => :matrix },
-
-              :revision,
-
-              { :name => :MetadataDocument, :send_in => :body, :default_value => { } }
-            ]
-          }.merge(options)
-        )
-        process_request(_request, options)
+        logger.debug { "#{__FILE__}:#{__LINE__} HERE" }
+        process_request_using_class(Requests::ItemMetadataSet, args, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/item/shape.html#get-files-for-shape
@@ -431,6 +420,7 @@ module Vidispine
         )
         process_request(_request, options)
       end
+      alias :item_search :items_search
 
       # @see http://apidoc.vidispine.com/4.2/ref/job.html#delete--job-(job-id)
       def job_abort(args = { }, options = { })
@@ -513,6 +503,22 @@ module Vidispine
             :http_path => 'metadata/#{arguments[:field_name]}',
             :parameters => [
               { :name => :field_name, :aliases => [ :name ], :send_in => :path }
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
+      # @see http://apidoc.vidispine.com/4.2.3/ref/metadata/field-group.html#get-a-list-of-known-groups
+      def metadata_field_groups_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'metadata-field/field-group',
+            :parameters => [
+              :content,
+              :traverse,
+              :data
             ]
           }.merge(options)
         )
@@ -640,9 +646,37 @@ module Vidispine
         process_request(_request, options)
       end
 
-      # @see http://apidoc.vidispine.com/4.2/ref/storage/file.html#list-files-in-storage
+      def storage_file_item_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'storage/#{path_arguments[:storage_id]}/file/#{path_arguments[:file_id]}/item',
+            :http_method => :get,
+            :parameters => [
+              { :name => :storage_id, :send_in => :path, :required => true },
+              { :name => :file_id, :send_in => :path, :required => true },
+
+              { :name => :uri, :send_in => :matrix },
+              { :name => :path, :send_in => :matrix }
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
+      # Exposes two functions
+      #   1. Get status of file in storage
+      #     @see http://apidoc.vidispine.com/4.2.3/ref/storage/file.html#get-status-of-file-in-storage
+      #
+      #   2. Get direct download access to file in storage
+      #     @see http://apidoc.vidispine.com/4.2.3/ref/storage/file.html#get-direct-download-access-to-file-in-storage
       def storage_file_get(args = { }, options = { })
         process_request_using_class(Requests::StorageFileGet, args, options)
+      end
+
+      # @see http://apidoc.vidispine.com/4.2/ref/storage/file.html#list-files-in-storage
+      def storage_files_get(args = { }, options = { })
+        process_request_using_class(Requests::StorageFilesGet, args, options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#get--storage-(storage-id)

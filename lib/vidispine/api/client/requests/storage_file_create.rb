@@ -1,7 +1,7 @@
 module Vidispine::API::Client::Requests
 
+  # @see http://apidoc.vidispine.com/4.2/ref/storage/file.html#list-files-in-storage
   class StorageFileCreate < BaseRequest
-    # @see http://apidoc.vidispine.com/4.2/ref/storage/file.html#list-files-in-storage
 
     HTTP_METHOD = :post
     HTTP_PATH = '/storage/#{path_arguments[:storage_id]}/file'

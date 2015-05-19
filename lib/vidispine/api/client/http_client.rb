@@ -32,6 +32,8 @@ module Vidispine
           initialize_logger(args)
           initialize_http(args)
 
+          logger.debug { "#{self.class.name}::#{__method__} Arguments: #{args.inspect}" }
+
           @username = args[:username] || DEFAULT_USERNAME
           @password = args[:password] || DEFAULT_PASSWORD
 
@@ -44,7 +46,7 @@ module Vidispine
           @authorization_header_value ||= %(Basic #{["#{username}:#{password}"].pack('m').delete("\r\n")})
 
           content_type = args[:content_type_header] ||= DEFAULT_HEADER_CONTENT_TYPE
-          accepts = args[:accepts_header] ||= DEFAULT_HEADER_ACCEPTS
+          accepts = args[:accepts_header] ||= args[:accept_header] || DEFAULT_HEADER_ACCEPTS
 
           @default_request_headers = {
             'Content-Type' => content_type,
@@ -102,17 +104,21 @@ module Vidispine
 
           @response = http.request(request)
           logger.debug { %(RESPONSE: #{response.inspect} HEADERS: #{response.to_hash.inspect} #{log_response_body and response.respond_to?(:body) ? "\n-- BODY BEGIN --\n#{format_body_for_log_output(response)}\n-- BODY END--" : ''}) }
-
+          #logger.debug { "Parse Response? #{@parse_response}" }
           @parse_response ? response_parsed : response.body
         end
 
         def response_parsed
-          @response_parsed ||= case response.content_type
-                                 when 'application/json'
-                                   JSON.parse(response.body) rescue response
-                                 else
-                                   response.body
-                               end
+          @response_parsed ||= begin
+            logger.debug { "Parsing Response. #{response.body.inspect}" }
+
+            case response.content_type
+            when 'application/json'
+            JSON.parse(response.body) # rescue response
+             else
+               response.body
+            end
+          end
         end
 
         # @param [String] path
@@ -161,6 +167,7 @@ module Vidispine
 
           if request.request_body_permitted?
             _body = (body and !body.is_a?(String)) ? JSON.generate(body) : body
+            logger.debug { "Processing Body: '#{_body}'" }
             request.body = _body if _body
           end
 
@@ -176,34 +183,55 @@ module Vidispine
         end
 
         def get(path, options = { })
+          # Allow the default request headers to be overridden
+          headers = options[:headers] || { }
+          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
+          _headers = _default_request_headers.merge(headers)
+
           query ||= options.fetch(:query, { })
           base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
-          request = Net::HTTP::Get.new(@uri.request_uri, default_request_headers)
+          request = Net::HTTP::Get.new(@uri.request_uri, _headers)
           send_request(request)
         end
 
         def head(path, options = { })
+          # Allow the default request headers to be overridden
+          headers = options[:headers] || { }
+          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
+          _headers = _default_request_headers.merge(headers)
+
           query ||= options.fetch(:query, { })
           base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
-          request = Net::HTTP::Head.new(@uri.request_uri, default_request_headers)
+
+          request = Net::HTTP::Head.new(@uri.request_uri, _headers)
           send_request(request)
         end
 
         def options(path, options = { })
+          # Allow the default request headers to be overridden
+          headers = options[:headers] || { }
+          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
+          _headers = _default_request_headers.merge(headers)
+
           query ||= options.fetch(:query, { })
           base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
-          request = Net::HTTP::Options.new(@uri.request_uri, default_request_headers)
+          request = Net::HTTP::Options.new(@uri.request_uri, _headers)
           send_request(request)
         end
 
         def put(path, body, options = { })
+          # Allow the default request headers to be overridden
+          headers = options[:headers] || { }
+          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
+          _headers = _default_request_headers.merge(headers)
+
           query = options.fetch(:query, { })
           base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
-          request = Net::HTTP::Put.new(@uri.request_uri, default_request_headers)
+          request = Net::HTTP::Put.new(@uri.request_uri, _headers)
 
           body = JSON.generate(body) if body and !body.is_a?(String)
 
@@ -212,11 +240,16 @@ module Vidispine
         end
 
         def post(path, body, options = { })
+          # Allow the default request headers to be overridden
+          headers = options[:headers] || { }
+          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
+          _headers = _default_request_headers.merge(headers)
+
           query = options.fetch(:query, { })
           base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
 
-          request = Net::HTTP::Post.new(@uri.request_uri, default_request_headers)
+          request = Net::HTTP::Post.new(@uri.request_uri, _headers)
 
           body = JSON.generate(body) if body and !body.is_a?(String)
 

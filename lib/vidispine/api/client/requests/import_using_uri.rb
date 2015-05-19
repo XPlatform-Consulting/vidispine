@@ -29,10 +29,14 @@ module Vidispine::API::Client::Requests
       { :name => :MetadataDocument, :aliases => [ :metadata ], :default_value => { }, :send_in => :body },
     ]
 
-    def after_process_parameters
-      # URI Needs to be escaped twice, so we do it once here and then again when the query is built
-      _uri = arguments[:uri]
-      arguments[:uri] = CGI.escape(_uri) if _uri
+    # def after_process_parameters
+    #   # URI Needs to be escaped twice, so we do it once here and then again when the query is built
+    #   _uri = arguments[:uri]
+    #   arguments[:uri] = CGI.escape(_uri) if _uri
+    # end
+
+    def body
+      @body ||= arguments[:MetadataDocument]
     end
 
   end

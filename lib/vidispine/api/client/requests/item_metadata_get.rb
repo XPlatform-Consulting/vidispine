@@ -1,8 +1,8 @@
 module Vidispine::API::Client::Requests
 
 
+  # @see http://apidoc.vidispine.com/4.2/ref/metadata/metadata.html#get--item-(id)-metadata
   class ItemMetadataGet < BaseRequest
-    # @see http://apidoc.vidispine.com/4.2/ref/metadata/metadata.html#get--item-(id)-metadata
 
     HTTP_METHOD = :get
     HTTP_PATH = '/item/#{path_arguments[:item_id]}/metadata'
@@ -28,9 +28,7 @@ module Vidispine::API::Client::Requests
         :from,
         :to,
 
-
         { :name => :includeTransientMetadata, :send_in => :query },
-
     ]
 
   end
