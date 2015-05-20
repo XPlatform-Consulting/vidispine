@@ -304,7 +304,7 @@ module Vidispine
           if file and file['fileAlreadyExists']
             _message = file['fileAlreadyExists']
             file = {
-                'id' => _message['id'],
+                'id' => _message['fileId'],
                 'path' => _message['path'],
             }
             file = storage_file_get(:storage_id => storage_id, :file_id => file['id'], :include_item => true)
