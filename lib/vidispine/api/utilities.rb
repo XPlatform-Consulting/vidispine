@@ -308,6 +308,8 @@ module Vidispine
                 'path' => _message['path'],
             }
             file = storage_file_get(:storage_id => storage_id, :file_id => file['id'], :include_item => true)
+            _response[:item] = item = (file || { })['item']
+            file_found = true if (file || { })['id']
           end
           raise "Error Creating File on Storage. Response: #{response.inspect}" unless (file || { })['id']
           _response[:storage_file_create_response] = storage_file_create_response
@@ -319,14 +321,17 @@ module Vidispine
 
         file_id = file['id']
 
-        # 4.2 Create a Placeholder
-        logger.debug { 'Creating Placeholder.' }
-        #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
-        #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :timespan => [ { :start => '-INF', :end => '+INF' }.merge(_metadata_as_fields) ] } }
-        #placeholder_args = args[:placeholder_args] ||= { :container => 1, :metadata_document => { :timespan => [ { :start => '-INF', :end => '+INF' }.merge(_metadata_as_fields) ] } }
-        placeholder_args = args[:placeholder_args] ||= { :container => 1, :metadata_document => metadata_document }
-        _response[:item] = item = import_placeholder(placeholder_args)
+        unless item
+          # 4.2 Create a Placeholder
+          logger.debug { 'Creating Placeholder.' }
+          #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
+          #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :timespan => [ { :start => '-INF', :end => '+INF' }.merge(_metadata_as_fields) ] } }
+          #placeholder_args = args[:placeholder_args] ||= { :container => 1, :metadata_document => { :timespan => [ { :start => '-INF', :end => '+INF' }.merge(_metadata_as_fields) ] } }
+          placeholder_args = args[:placeholder_args] ||= { :container => 1, :metadata_document => metadata_document }
+          _response[:item] = item = import_placeholder(placeholder_args)
+        end
         item_id = item['id']
+        shape = item['shape']
 
         raise "Error Creating Placeholder: #{item}" unless item_id
 
@@ -341,36 +346,38 @@ module Vidispine
           _response[:collection_object_add] = collection_object_add_response
         end
 
-        # 6. Add the file as the original shape
-        logger.debug { 'Adding the file as the Original Shape.' }
-        item_shape_import_response = item_shape_import(:item_id => item_id, :file_id => file_id, :tag => 'original')
-        _response[:item_shape_import] = item_shape_import_response
+        unless shape
+          # 6. Add the file as the original shape
+          logger.debug { 'Adding the file as the Original Shape.' }
+          item_shape_import_response = item_shape_import(:item_id => item_id, :file_id => file_id, :tag => 'original')
+          _response[:item_shape_import] = item_shape_import_response
 
-        job_id = item_shape_import_response['jobId']
-        job_monitor_response = wait_for_job_completion(:job_id => job_id) { |env|
-          logger.debug { "Waiting for Item Shape Import Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
-        }
-        last_response = job_monitor_response[:last_response]
-        raise "Error Adding file As Original Shape. Response: #{last_response.inspect}" unless last_response['status'] == 'FINISHED'
+          job_id = item_shape_import_response['jobId']
+          job_monitor_response = wait_for_job_completion(:job_id => job_id) { |env|
+            logger.debug { "Waiting for Item Shape Import Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
+          }
+          last_response = job_monitor_response[:last_response]
+          raise "Error Adding file As Original Shape. Response: #{last_response.inspect}" unless last_response['status'] == 'FINISHED'
 
-        # 7. Generate the Transcode of the item
-        transcode_tag = args.fetch(:transcode_tag, 'lowres')
-        if transcode_tag and !transcode_tag.empty?
-          logger.debug { 'Generating Transcode of the Item.' }
-          item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
-          _response[:item_transcode] = item_transcode_response
-        end
+          # 7. Generate the Transcode of the item
+          transcode_tag = args.fetch(:transcode_tag, 'lowres')
+          if transcode_tag and !transcode_tag.empty?
+            logger.debug { 'Generating Transcode of the Item.' }
+            item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
+            _response[:item_transcode] = item_transcode_response
+          end
 
-        # 8. Generate the Thumbnails and Poster Frame
-        create_thumbnails = args.fetch(:create_thumbnails, true)
-        create_posters = args[:create_posters] || 3
-        if (create_thumbnails or create_posters)
-          logger.debug { 'Generating Thumbnails(s) and Poster Frame.' }
-          args_out = { :item_id => item_id }
-          args_out[:create_thumbnails] = create_thumbnails if create_thumbnails
-          args_out[:create_posters] = create_posters if create_posters
-          item_thumbnail_response = item_thumbnail(args_out)
-          _response[:item_thumbnail] = item_thumbnail_response
+          # 8. Generate the Thumbnails and Poster Frame
+          create_thumbnails = args.fetch(:create_thumbnails, true)
+          create_posters = args[:create_posters] || 3
+          if (create_thumbnails or create_posters)
+            logger.debug { 'Generating Thumbnails(s) and Poster Frame.' }
+            args_out = { :item_id => item_id }
+            args_out[:create_thumbnails] = create_thumbnails if create_thumbnails
+            args_out[:create_posters] = create_posters if create_posters
+            item_thumbnail_response = item_thumbnail(args_out)
+            _response[:item_thumbnail] = item_thumbnail_response
+          end
         end
 
         _response
