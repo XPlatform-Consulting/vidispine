@@ -306,6 +306,17 @@ module Vidispine
         _response[:item_already_existed] = !!item
         return _response if item
 
+        # We have an issue with files with ampersands where they
+        # get reprocessed and come through 'fileAlreadyExists'
+        if file['fileAlreadyExists']
+          _message = file
+          file = {
+              'id' => _message['id'],
+              'path' => _message['path'],
+          }
+          file = storage_file_get(:storage_id => storage_id, :file_id => file['id'], :include_item => true)
+        end
+
         file_id = file['id']
 
         # 4.2 Create a Placeholder
@@ -368,17 +379,15 @@ module Vidispine
 
 
       def item_add_shape_using_file_path(args = { }, options = { })
-        logger.debug { "#{__method__}:#{args.inspect}"}
+        logger.debug { "#{__method__}:#{args.inspect}" }
         _response = { }
 
         storage_path_map = args[:storage_path_map]
-
 
         item = args[:item] || { }
         item_id = args[:item_id] || item['id']
 
         tag = args[:tag]
-
 
         file = args[:file] || { }
         file_id = args[:file_id] || file['id']
@@ -402,7 +411,6 @@ module Vidispine
           file_id = file['id']
           raise "File Error: #{file} Response: #{_response}" unless file_id
         end
-
 
         item_shape_import_args = { :item_id => item_id, :file_id => file_id, :tag => tag }
         item_shape_import(item_shape_import_args)
