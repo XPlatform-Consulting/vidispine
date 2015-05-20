@@ -985,6 +985,11 @@ module Vidispine
         unless file
           # 4.1.1 Create the storage file record if it does not exist
           file = storage_file_create(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :state => 'CLOSED')
+          if (file || { })['fileAlreadyExists']
+            _message = file['fileAlreadyExists']
+            logger.warn { "Running Recreation of Existing File Work Around: #{_message}" }
+            file = storage_file_get(:storage_id => storage_id, :file_id => _message['fileId'], :include_item => true)
+          end
           raise "Error Creating File on Storage. Response: #{response.inspect}" unless (file || { })['id']
         end
 
