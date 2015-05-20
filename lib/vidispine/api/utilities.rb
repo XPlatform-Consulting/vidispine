@@ -299,23 +299,23 @@ module Vidispine
           file_found = false
           # 4.1.1 Create the storage file record if it does not exist
           file = storage_file_create_response = storage_file_create(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :state => 'CLOSED')
-          raise "Error Creating File on Storage. Response: #{response.inspect}" unless file
+          # We have an issue with files with ampersands where they
+          # get reprocessed and come through 'fileAlreadyExists'
+          if file and file['fileAlreadyExists']
+            _message = file['fileAlreadyExists']
+            file = {
+                'id' => _message['id'],
+                'path' => _message['path'],
+            }
+            file = storage_file_get(:storage_id => storage_id, :file_id => file['id'], :include_item => true)
+          end
+          raise "Error Creating File on Storage. Response: #{response.inspect}" unless (file || { })['id']
           _response[:storage_file_create_response] = storage_file_create_response
         end
         _response[:file_already_existed] = file_found
         _response[:item_already_existed] = !!item
         return _response if item
 
-        # We have an issue with files with ampersands where they
-        # get reprocessed and come through 'fileAlreadyExists'
-        if file['fileAlreadyExists']
-          _message = file
-          file = {
-              'id' => _message['id'],
-              'path' => _message['path'],
-          }
-          file = storage_file_get(:storage_id => storage_id, :file_id => file['id'], :include_item => true)
-        end
 
         file_id = file['id']
 
