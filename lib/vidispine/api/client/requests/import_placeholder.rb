@@ -6,9 +6,9 @@ module Vidispine::API::Client::Requests
     HTTP_PATH = '/import/placeholder'
 
     PARAMETERS = [
-      { :name => :container, :required => true },
-      { :name => :audio, :required => true },
-      { :name => :video, :required => true },
+      { :name => :container },
+      { :name => :audio },
+      { :name => :video },
       :type,
       :frameDuration,
       :notification,
