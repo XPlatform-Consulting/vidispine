@@ -286,37 +286,20 @@ module Vidispine
 
           file = storage_file_get_response
         else
-          storage_file_get_response = storage_files_get(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :include_item => true) || { 'file' => [ ] }
-          _response[:storage_file_get_response] = storage_file_get_response
-
-          file = ((storage_file_get_response || { })['file'] || [ ]).first
+          storage_file_get_or_create_response = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, :extended_response => true)
+          _response[:storage_file_get_or_create_response] = storage_file_get_or_create_response
+          file = storage_file_get_or_create_response[:file]
+          file_found = storage_file_get_or_create_response[:file_already_existed]
         end
 
         if file
           _response[:item] = item = file['item']
           file_found = true
-        else
-          file_found = false
-          # 4.1.1 Create the storage file record if it does not exist
-          file = storage_file_create_response = storage_file_create(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :state => 'CLOSED')
-
-          # We have an issue with files with ampersands where they
-          # get reprocessed and come through 'fileAlreadyExists'
-          if (file || { })['fileAlreadyExists']
-            _message = file['fileAlreadyExists']
-            logger.warn { "Running Recreation of Existing File Work Around: #{_message}" }
-            file = storage_file_get(:storage_id => storage_id, :file_id => _message['fileId'], :include_item => true)
-            _response[:item] = item = (file || { })['item']
-            file_found = true if (file || { })['id']
-          end
-
-          raise "Error Creating File on Storage. Response: #{response.inspect}" unless (file || { })['id']
-          _response[:storage_file_create_response] = storage_file_create_response
         end
+
         _response[:file_already_existed] = file_found
         _response[:item_already_existed] = !!item
         return _response if item
-
 
         file_id = file['id']
 
@@ -352,6 +335,15 @@ module Vidispine
           _response[:item_shape_import] = item_shape_import_response
 
           job_id = item_shape_import_response['jobId']
+          unless job_id
+            invalid_input = item_shape_import_response['invalidInput']
+            if invalid_input
+              explaination = invalid_input['explanation']
+              job_id = $1 if explaination.match(/.*\[(.*)\]$/)
+            end
+          end
+          raise "Error Creating Item Shape Import Job. Response: #{item_shape_import_response.inspect}" unless job_id
+
           job_monitor_response = wait_for_job_completion(:job_id => job_id) { |env|
             logger.debug { "Waiting for Item Shape Import Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
           }
@@ -361,9 +353,16 @@ module Vidispine
           # 7. Generate the Transcode of the item
           transcode_tag = args.fetch(:transcode_tag, 'lowres')
           if transcode_tag and !transcode_tag.empty?
-            logger.debug { 'Generating Transcode of the Item.' }
-            item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
-            _response[:item_transcode] = item_transcode_response
+            wait_for_transcode_job = options[:wait_for_transcode_job]
+            [*transcode_tag].each do |_transcode_tag|
+
+              transcode_response = item_transcode_extended({ :item_id => item_id, :transcode_tag => _transcode_tag }, { :wait_for_transcode_job => wait_for_transcode_job })
+              (_response[:transcode] ||= { })[transcode_tag] = transcode_response
+
+              # each transcode_tag
+            end
+
+            # if transcode_tag
           end
 
           # 8. Generate the Thumbnails and Poster Frame
@@ -381,8 +380,6 @@ module Vidispine
 
         _response
       end
-
-
 
       def item_add_shape_using_file_path(args = { }, options = { })
         logger.debug { "#{__method__}:#{args.inspect}" }
@@ -549,6 +546,45 @@ module Vidispine
         _response
       end
 
+      def item_transcode_extended(args = { }, options = { })
+        _response = { }
+        item_id = args[:item_id]
+        transcode_tag = args[:transcode_tag] || 'lowres'
+
+        logger.debug { "Generating Transcode of the Item. Tag: '#{transcode_tag}'" }
+        item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
+        _response[:item_transcode] = item_transcode_response
+
+        if options[:wait_for_transcode_job]
+          job_id = item_transcode_response['jobId']
+          job_monitor_response = wait_for_job_completion(:job_id => job_id) do |env|
+            logger.debug { "Waiting for '#{transcode_tag}' Transcode Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
+          end
+
+          last_response = job_monitor_response[:last_response]
+          if last_response['status'] == 'FINISHED'
+            data = last_response['data']
+            data = Hash[ data.map { |d| [ d['key'], d['value'] ] } ]
+
+            proxy_shape_ids = data['shapeIds']
+            proxy_shape_id = proxy_shape_ids
+            if proxy_shape_id
+              item_shape_files = item_shape_files_get(:item_id => item_id, :shape_id => proxy_shape_id)
+              proxy_file = (((item_shape_files || { })['file'] || [ ]).first || { })
+              proxy_file_uri = (proxy_file['uri'] || [ ]).first
+              _response[:file] = proxy_file
+              _response[:shape_id] = proxy_shape_id
+              _response[:file_uri] = proxy_file_uri
+              _response[:file_path] = URI(proxy_file_uri).path
+            end
+          end
+
+          # if wait_for_transcode_job
+        end
+
+        _response
+      end
+
       # @param [Hash] args
       # @option args [String] :file_path (Required)
       # @option args [String] :metadata_file_path_field_id (Required)
@@ -622,32 +658,20 @@ module Vidispine
 
         item = (search_response['entry'].first || { })['item']
         unless item
-          # If the item wasn't found then get the file id for the file
-          # 4.1 Search for the storage file record
-          storage_file_get_response = storage_file_get(:storage_id => storage_id, :path => file_path_relative_to_storage_path) || { 'file' => [ ] }
-          raise "Error Getting Storage File. '#{response.inspect}'" unless response
-          file = storage_file_get_response['file'].first
-          _response[:storage_file_get_response] = storage_file_get_response
+          storage_file_get_or_create_response = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, :extended_response => true)
+          _response[:storage_file_get_or_create_response] = storage_file_get_or_create_response
+          file = storage_file_get_or_create_response[:file]
 
-          unless file
-            # 4.1.1 Create the storage file record if it does not exist
-            file = storage_file_create_response = storage_file_create(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :state => 'CLOSED')
-            raise "Error Creating File on Storage. Response: #{response}" unless file
-            _response[:storage_file_create_response] = storage_file_create_response
+          item = placeholder = file['item']
+
+          unless item
+            # 4.2 Create a Placeholder
+            logger.debug { 'Creating Placeholder.' }
+            #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
+            placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
+            item = placeholder = import_placeholder(placeholder_args)
           end
-
-          # 4.2 Create a Placeholder
-          logger.debug { 'Creating Placeholder.' }
-          #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
-          placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
-          item = placeholder = import_placeholder(placeholder_args)
           _response[:placeholder] = placeholder
-        # else
-        #   logger.debug { 'Getting File Using Path.' }
-        #   response = storage_file_get(:storage_id => storage_id, :path => file_path_relative_to_storage_path) || { 'file' => [ ] }
-        #   raise "Error Getting Storage File. '#{response.inspect}'" unless response
-        #
-        #   file = response['file'].first
         end
 
         _response[:item] = item
@@ -978,22 +1002,34 @@ module Vidispine
       def storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, options = { })
         logger.debug { "Method: #{__method__} Args:#{{:storage_id => storage_id, :file_path_relative_to_storage_path => file_path_relative_to_storage_path, :options => options }.inspect}" }
         include_item = options.fetch(:include_item, true)
-
+        creation_state = options[:creation_state] || 'CLOSED'
         storage_file_get_response = storage_files_get(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :include_item => include_item) || { 'file' => [ ] }
         file = ((storage_file_get_response || { })['file'] || [ ]).first
-
-        unless file
+        if file
+          file_already_existed = true
+        else
+          file_already_existed = false
           # 4.1.1 Create the storage file record if it does not exist
-          file = storage_file_create(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :state => 'CLOSED')
+          storage_file_create_response = file = storage_file_create(:storage_id => storage_id, :path => file_path_relative_to_storage_path, :state => creation_state)
           if (file || { })['fileAlreadyExists']
+            file_already_existed = true
             _message = file['fileAlreadyExists']
             logger.warn { "Running Recreation of Existing File Work Around: #{_message}" }
-            file = storage_file_get(:storage_id => storage_id, :file_id => _message['fileId'], :include_item => true)
+            storage_file_get_response = file = storage_file_get(:storage_id => storage_id, :file_id => _message['fileId'], :include_item => include_item)
           end
           raise "Error Creating File on Storage. Response: #{response.inspect}" unless (file || { })['id']
         end
 
         logger.debug { "Method: #{__method__} Response: #{file.inspect}" }
+
+        if options[:extended_response]
+          return {
+            :file => file,
+            :file_already_existed => file_already_existed,
+            :storage_file_get_response => storage_file_get_response,
+            :storage_file_create_response => storage_file_create_response
+          }
+        end
         file
       end
 
@@ -1043,6 +1079,7 @@ module Vidispine
           if block_given?
             yield_out = {
               :time_started => time_started,
+              :poll_interval => delay,
               :latest_response => _response,
               :job_status => job_status,
               :continue_monitoring => continue_monitoring,
@@ -1051,7 +1088,7 @@ module Vidispine
             yield yield_out
             break unless continue_monitoring
           else
-            logger.debug { "Waiting for job completion. Job: #{job_status}" }
+            logger.debug { "Waiting for job completion. Job: #{job_status} Poll Interval: #{delay}" }
           end
 
           sleep(delay)
