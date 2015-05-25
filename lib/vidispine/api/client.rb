@@ -239,17 +239,52 @@ module Vidispine
         _request = Requests::BaseRequest.new(
           args,
           {
-            :http_path => '"/item/#{path_arguments[:item_id]}/shape/#{path_arguments[:shape_id]}/file"',
+            :http_path => '/item/#{path_arguments[:item_id]}/shape/#{path_arguments[:shape_id]}/file',
             :default_parameter_send_in_value => :path,
             :parameters => [
-              :item_id,
-              :shape_id
+              { :name => :item_id, :required => true },
+              { :name => :shape_id, :required => true }
             ]
           }.merge(options)
         )
         process_request(_request, options)
       end
       alias :item_shape_files :item_shape_files_get
+
+      # @see http://apidoc.vidispine.com/4.2.6/ref/item/shape.html#get-shape
+      def item_shape_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => '/item/#{path_arguments[:item_id]}/shape/#{path_arguments[:shape_id]}',
+            :default_parameter_send_in_value => :path,
+            :parameters => [
+              { :name => :item_id, :required => true },
+              { :name => :shape_id },
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
+      # @see http://apidoc.vidispine.com/4.2.6/ref/item/shape.html#get-list-of-shapes
+      def item_shapes_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => '/item/#{path_arguments[:item_id]}/shape',
+            :default_parameter_send_in_value => :path,
+            :parameters => [
+              { :name => :item_id, :required => true },
+              { :name => :uri, :send_in => :query },
+              { :name => :placeholder, :send_in => :query },
+              { :name => :tag, :send_in => :query }, # Not Documented
+              { :name => :version, :send_in => :matrix }
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
 
       # @see http://apidoc.vidispine.com/4.2/ref/item/shape.html#import-a-shape-using-a-uri-or-an-existing-file
       def item_shape_import(args = { }, options = { })
