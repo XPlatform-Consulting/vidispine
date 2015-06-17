@@ -256,8 +256,8 @@ module Vidispine
         storage_id = storage['id']
         raise "Error Retrieving Storage Record. Storage: #{storage}" unless storage_id
 
-        # The method type of the URI too lookup
-        storage_method_type = args[:storage_method_type] = 'file'
+        # The method type of the URI to lookup
+        storage_method_type = args[:storage_method_type] ||= 'file'
 
         storage_uri_method = "#{storage_method_type}:"
         storage_uri_raw = (storage['method'].find { |v| v['uri'].start_with?(storage_uri_method) } || { })['uri'] rescue nil
@@ -575,7 +575,7 @@ module Vidispine
               _response[:file] = proxy_file
               _response[:shape_id] = proxy_shape_id
               _response[:file_uri] = proxy_file_uri
-              _response[:file_path] = URI(proxy_file_uri).path
+              _response[:file_path] = URI.decode(URI(proxy_file_uri).path)
             end
           end
 
@@ -1072,7 +1072,7 @@ module Vidispine
           break unless _response
 
           job_status = _response['status']
-          break if %w(FINISHED FINISHED_WARNING FINISHED_TOTAL ABORTED).include?(job_status)
+          break if %w(FAILED_TOTAL FINISHED FINISHED_WARNING FINISHED_TOTAL ABORTED).include?(job_status)
 
           break if timeout and (timed_out = ((Time.now - time_started) > timeout))
 
