@@ -352,11 +352,18 @@ module Vidispine
 
           # 7. Generate the Transcode of the item
           transcode_tag = args.fetch(:transcode_tag, 'lowres')
-          if transcode_tag and !transcode_tag.empty?
+          if transcode_tag and !transcode_tag.empty? and transcode_tag.to_s.downcase != 'false'
             wait_for_transcode_job = options[:wait_for_transcode_job]
+            skip_transcode_if_shape_with_tag_exists = options.fetch(:skip_transcode_if_shape_with_tag_exists, true)
             [*transcode_tag].each do |_transcode_tag|
-
-              transcode_response = item_transcode_extended({ :item_id => item_id, :transcode_tag => _transcode_tag }, { :wait_for_transcode_job => wait_for_transcode_job })
+              transcode_response = item_transcode_extended({
+                                                             :item_id => item_id,
+                                                             :transcode_tag => _transcode_tag
+                                                           },
+                                                           {
+                                                             :wait_for_transcode_job => wait_for_transcode_job,
+                                                             :skip_if_shape_with_tag_exists => skip_transcode_if_shape_with_tag_exists
+                                                           })
               (_response[:transcode] ||= { })[transcode_tag] = transcode_response
 
               # each transcode_tag
@@ -546,40 +553,56 @@ module Vidispine
         _response
       end
 
+      # @param [Hash] args
+      # @param [Hash] options
+      # @option options [Boolean] :skip_if_shape_with_tag_exists
       def item_transcode_extended(args = { }, options = { })
         _response = { }
         item_id = args[:item_id]
         transcode_tag = args[:transcode_tag] || 'lowres'
+        skip_if_tag_exists = options.fetch(:skip_if_shape_with_tag_exists, false)
 
-        logger.debug { "Generating Transcode of the Item. Tag: '#{transcode_tag}'" }
-        item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
-        _response[:item_transcode] = item_transcode_response
+        if skip_if_tag_exists
+          item_shapes_response = item_shapes_get(:item_id => item_id, :tag => transcode_tag)
+          shape_ids = item_shapes_response['uri'] || [ ]
+          proxy_shape_id = shape_ids.last
+          _response[:tag_existed] = !!proxy_shape_id
+        end
 
-        if options[:wait_for_transcode_job]
-          job_id = item_transcode_response['jobId']
-          job_monitor_response = wait_for_job_completion(:job_id => job_id) do |env|
-            logger.debug { "Waiting for '#{transcode_tag}' Transcode Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
-          end
+        unless proxy_shape_id
 
-          last_response = job_monitor_response[:last_response]
-          if last_response['status'] == 'FINISHED'
-            data = last_response['data']
-            data = Hash[ data.map { |d| [ d['key'], d['value'] ] } ]
+          logger.debug { "Generating Transcode of the Item. Tag: '#{transcode_tag}'" }
+          item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
+          _response[:item_transcode] = item_transcode_response
 
-            proxy_shape_ids = data['shapeIds']
-            proxy_shape_id = proxy_shape_ids
-            if proxy_shape_id
-              item_shape_files = item_shape_files_get(:item_id => item_id, :shape_id => proxy_shape_id)
-              proxy_file = (((item_shape_files || { })['file'] || [ ]).first || { })
-              proxy_file_uri = (proxy_file['uri'] || [ ]).first
-              _response[:file] = proxy_file
-              _response[:shape_id] = proxy_shape_id
-              _response[:file_uri] = proxy_file_uri
-              _response[:file_path] = URI.decode(URI(proxy_file_uri).path)
+          if options[:wait_for_transcode_job]
+            job_id = item_transcode_response['jobId']
+            job_monitor_response = wait_for_job_completion(:job_id => job_id) do |env|
+              logger.debug { "Waiting for '#{transcode_tag}' Transcode Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
             end
+
+            last_response = job_monitor_response[:last_response]
+            if last_response['status'] == 'FINISHED'
+              data = last_response['data']
+              data = Hash[ data.map { |d| [ d['key'], d['value'] ] } ]
+
+              proxy_shape_ids = data['shapeIds']
+              proxy_shape_id = proxy_shape_ids
+            end
+
+            # if wait_for_transcode_job
           end
 
-          # if wait_for_transcode_job
+        end
+
+        if proxy_shape_id
+          item_shape_files = item_shape_files_get(:item_id => item_id, :shape_id => proxy_shape_id)
+          proxy_file = (((item_shape_files || { })['file'] || [ ]).first || { })
+          proxy_file_uri = (proxy_file['uri'] || [ ]).first
+          _response[:file] = proxy_file
+          _response[:shape_id] = proxy_shape_id
+          _response[:file_uri] = proxy_file_uri
+          _response[:file_path] = URI.decode(URI(proxy_file_uri).path)
         end
 
         _response
@@ -915,7 +938,7 @@ module Vidispine
       # @param [Hash] storage_path_map (#storage_file_path_map_create)
       # @return [Hash] :relative_file_path, :storage_id, :storage_path_map, :volume_path
       def process_file_path_using_storage_map(file_path, storage_path_map = nil)
-        logger.debug { "Method: #{__method__} Args: #{{:file_path => file_path, :storage_path_map => storage_path_map}}"}
+        logger.debug { "Method: #{__method__} Args: #{{:file_path => file_path, :storage_path_map => storage_path_map}.inspect}"}
 
         storage_path_map ||= storage_file_path_map_create
 
@@ -994,6 +1017,54 @@ module Vidispine
         end
 
         storage_file_create(_args, options)
+      end
+
+      # @param [Hash] args
+      # @option args [String] :file_path
+      # @option args [Hash] :storage_path_map
+      # @option args [Boolean] :create_if_not_exists (True)
+      # @option args [Boolean] :include_item (True)
+      def storage_file_get_using_file_path(args = { })
+        _response = { }
+        file_path = args[:file_path]
+        storage_path_map = args[:storage_path_map] || storage_file_path_map_create
+        storage_path_map = storage_file_path_map_create if storage_path_map.empty?
+
+        volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path) }
+        raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
+
+        file_path_relative_to_storage_path = file_path.sub(volume_path, '')
+        logger.debug { "File Path Relative to Storage Path: #{file_path_relative_to_storage_path}" }
+
+        storage = storage_get(:id => storage) if storage.is_a?(String)
+        _response[:storage] = storage
+        storage_id = storage['id']
+        raise "Error Retrieving Storage Record. Storage: #{storage}" unless storage_id
+
+        # The method type of the URI to lookup
+        storage_method_type = args[:storage_method_type] ||= 'file'
+
+        storage_uri_method = "#{storage_method_type}:"
+        storage_uri_raw = (storage['method'].find { |v| v['uri'].start_with?(storage_uri_method) } || { })['uri'] rescue nil
+        raise "Error Getting URI from Storage Method. Storage: #{storage.inspect}" unless storage_uri_raw
+        storage_uri = URI.parse(storage_uri_raw)
+
+        vidispine_file_path = File.join(storage_uri.path, file_path_relative_to_storage_path)
+        logger.debug { "Vidispine File Path: '#{vidispine_file_path}'" }
+
+        create_if_not_exists = args.fetch(:create_if_not_exists, true)
+        include_item = args.fetch(:include_item, true)
+        options_out = { :include_item => include_item }
+        if create_if_not_exists
+          storage_file_get_or_create_response = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, options_out.merge(:extended_response => true))
+          _response[:storage_file_get_or_create_response] = storage_file_get_or_create_response
+          file = storage_file_get_or_create_response[:file]
+        else
+          storage_file_get_response = storage_files_get({ :storage_id => storage_id, :path => file_path_relative_to_storage_path }.merge(options_out)) || { 'file' => [ ] }
+          file = ((storage_file_get_response || { })['file'] || [ ]).first
+        end
+
+        file
       end
 
       # Will search for a relative file path on a storage and if not found will trigger a storage_file_create
