@@ -1,0 +1,43 @@
+#!/usr/bin/env ruby
+require 'rubygems'
+require 'logger'
+require 'optparse'
+require 'pp'
+
+module Vidispine
+
+  class NotificationHandler
+
+    attr_accessor :logger
+
+    def initialize(args = { })
+      initialize_logger(args)
+    end
+
+    def initialize_logger(args = { })
+      @logger = args[:logger] ||= begin
+        _logger = Logger.new(args[:log_to] || STDERR)
+        _logger.level = args[:log_level] || Logger::DEBUG
+        _logger
+      end
+    end
+
+  end
+
+end
+
+
+args = {
+  :log_to => "/tmp/#{File.basename($0)}.log",
+  :log_level => Logger::DEBUG
+}
+
+@handler = Vidispine::NotificationHandler.new(args)
+def logger; @handler.logger end
+logger.debug { "ARGUMENTS: #{ARGV.inspect}" }
+
+# ARGV << '{changeSetId=[VX-460], userName=[admin], itemId=[VX-90], portal_mf201890=[3], sequenceNumber=[0]}'
+# puts 'Arguments:'
+# pp ARGV
+
+
