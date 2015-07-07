@@ -239,11 +239,8 @@ module Vidispine
         raise ArgumentError, ':file_path is a required argument.' unless file_path
 
         # 2. Determine Storage ID
-        storage_path_map = args[:storage_path_map] || storage_file_path_map_create
-        # raise ArgumentError, ':storage_path_map is a required argument.' unless storage_path_map
-
-        # Make sure the keys are strings
-        # storage_path_map = Hash[storage_path_map.map { |k,v| [k.to_s, v] }] if storage_path_map.is_a?(Hash)
+        storage_path_map = args[:storage_path_map]
+        storage_path_map = storage_file_path_map_create unless storage_path_map and !storage_path_map.empty?
 
         volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path) }
         raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
@@ -940,7 +937,7 @@ module Vidispine
       def process_file_path_using_storage_map(file_path, storage_path_map = nil)
         logger.debug { "Method: #{__method__} Args: #{{:file_path => file_path, :storage_path_map => storage_path_map}.inspect}"}
 
-        storage_path_map ||= storage_file_path_map_create
+        storage_path_map = storage_file_path_map_create unless storage_path_map and !storage_path_map.empty?
 
         volume_path, storage_id = storage_path_map.find { |path, _| file_path.start_with?(path) }
         file_path_relative_to_storage_path = file_path.sub(volume_path, '')
@@ -978,11 +975,16 @@ module Vidispine
         _args = _args.merge(_data[:arguments_out])
 
         storage_path_map = _args.delete(:storage_map) { }
-        storage_path_map = Hash[storage_path_map.map { |k,v| [k.to_s, v] }] if storage_path_map.is_a?(Hash)
+        if storage_path_map.empty?
+          storage_path_map = storage_file_path_map_create
+        else
+          storage_path_map = Hash[storage_path_map.map { |k,v| [k.to_s, v] }] if storage_path_map.is_a?(Hash)
+        end
+
 
         dir = _args.delete(:directory) { }
         if dir
-          raise ArgumentError, ':storage_map is a required argument.' unless storage_path_map
+          # raise ArgumentError, ':storage_map is a required argument.' unless storage_path_map
 
           volume_path, storage = storage_path_map.find { |path, _| dir.start_with?(path) }
           raise "Unable to find match in storage path map for '#{dir}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
