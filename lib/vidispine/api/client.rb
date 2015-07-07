@@ -230,7 +230,6 @@ module Vidispine
 
       # @see http://apidoc.vidispine.com/4.2/ref/metadata/metadata.html#add-a-metadata-change-set
       def item_metadata_set(args = { }, options = { })
-        logger.debug { "#{__FILE__}:#{__LINE__} HERE" }
         process_request_using_class(Requests::ItemMetadataSet, args, options)
       end
 
