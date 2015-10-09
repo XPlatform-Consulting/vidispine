@@ -191,6 +191,7 @@ module Vidispine
         item_search_document
       end
 
+      # @return [Hash]
       def build_metadata_document(metadata_in, map = { }, options = { })
         map = (options[:default_metadata_map] || default_metadata_map).merge(map.merge(options[:metadata_map] || { }))
         groups = { }
@@ -226,6 +227,39 @@ module Vidispine
         end
 
         { :timespan => [ { :start => '-INF', :end => '+INF', :field => _field, :group => _group } ] }
+      end
+
+      # @return [Array]
+      def build_metadata_documents(metadata_in, map = { }, options = { })
+        map = (options[:default_metadata_map] || default_metadata_map).merge(map.merge(options[:metadata_map] || { }))
+        groups = { }
+        metadata_in.each do |k,v|
+          _map = map[k]
+          next unless _map
+          _map = [ _map ] unless _map.is_a?(Array)
+          _map.each do |_map_|
+            _map_ = { :field => _map_ } if _map_.is_a?(String)
+            #puts "##{_map_[:group].inspect} #{_map_.class.name} #{_map_.inspect}"
+            (groups[_map_[:group]] ||= { })[_map_[:field]] = v
+          end
+        end
+
+        _field = groups.delete(nil) { { } }.map { |fname, values| { :name => fname, :value => [*values].map { |v| { :value => v } } } }
+        _groups = groups.map { |name, fields| { :name => name, :field => fields.map { |fname, values| { :name => fname, :value => [*values].map { |v| { :value => v } } } } } }
+
+        docs = [ ]
+
+        if !_field.empty?
+          docs << { :timespan => [ { :start => '-INF', :end => '+INF', :field => _field, :group => [ ] } ] }
+        end
+
+        _groups.each do |_group|
+          group_name = _group[:name]
+          group_fields = _group[:field]
+          docs << { :group => [ group_name ], :timespan => [ { :start => '-INF', :end => '+INF', :field => group_fields } ] }
+        end
+
+        docs
       end
 
 
@@ -270,7 +304,9 @@ module Vidispine
 
         # map metadata assuming 1 value per field
         #_metadata_as_fields = transform_metadata_to_fields(_metadata, _metadata_map, options)
-        metadata_document = build_metadata_document(_metadata, _metadata_map, options)
+        #metadata_document = build_metadata_document(_metadata, _metadata_map, options)
+        metadata_documents = build_metadata_documents(_metadata, _metadata_map, options)
+        metadata_document = metadata_documents.shift || { }
 
 
         # Allow the file to be passed in
@@ -314,6 +350,11 @@ module Vidispine
 
         raise "Error Creating Placeholder: #{item}" unless item_id
 
+        # Add any additional metadata (Vidispine will only take one group at a time)
+        metadata_documents.each do |metadata_document|
+          item_metadata_set(:item_id => item_id, :metadata_document => metadata_document)
+        end
+
         if options[:add_item_to_collection]
           logger.debug { 'Determining Collection to Add the Item to.' }
           collection = determine_collection(args, options)
@@ -335,8 +376,8 @@ module Vidispine
           unless job_id
             invalid_input = item_shape_import_response['invalidInput']
             if invalid_input
-              explaination = invalid_input['explanation']
-              job_id = $1 if explaination.match(/.*\[(.*)\]$/)
+              explanation = invalid_input['explanation']
+              job_id = $1 if explanation.match(/.*\[(.*)\]$/)
             end
           end
           raise "Error Creating Item Shape Import Job. Response: #{item_shape_import_response.inspect}" unless job_id
@@ -431,6 +472,7 @@ module Vidispine
       # 5. Trigger the Transcode of the Proxy, thumbnails
       # 6. Trigger the Transcode of the thumbnail.
       # 7. Trigger the Transcode of the poster frame
+      # This was an early experiment
       def item_add_using_file_path_metadata(args = { }, options = { })
         args = symbolize_keys(args, false)
         _response = { }
@@ -548,6 +590,32 @@ module Vidispine
         _response[:item_thumbnail] = item_thumbnail_response
 
         _response
+      end
+
+      def item_shapes_get_extended(args = { }, options = { })
+        item_id = args[:item_id]
+        return_as_hash = options.fetch(:return_as_hash, false)
+
+        if return_as_hash
+          key_by_field = options[:hash_key] || 'id'
+        end
+
+        shapes_response = item_shapes_get(:item_id => item_id)
+
+        shape_ids = shapes_response['uri']
+        shapes = [ ]
+        shape_ids.each do |shape_id|
+          shape = item_shape_get(:item_id => item_id, :shape_id => shape_id)
+          shape.dup.each do |k, v|
+            shape[k] = v.first if v.is_a?(Array) and v.length == 1 and !['metadata'].include?(k)
+          end
+          shapes << shape
+        end
+
+        shapes_formatted = return_as_hash ? Hash[ shapes.map { |v| [ v[key_by_field], v ] } ] : nil #shapes
+
+        shapes_response['shapes'] = shapes_formatted
+        shapes_response
       end
 
       # @param [Hash] args
@@ -930,7 +998,7 @@ module Vidispine
       end
       alias :item_search_extended :items_search_extended
 
-      # Will process a file through a storage path map
+      # Will process a file path through a storage path map
       # @param [String] file_path
       # @param [Hash] storage_path_map (#storage_file_path_map_create)
       # @return [Hash] :relative_file_path, :storage_id, :storage_path_map, :volume_path
