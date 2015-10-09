@@ -412,7 +412,7 @@ module Vidispine
 
           # 8. Generate the Thumbnails and Poster Frame
           create_thumbnails = args.fetch(:create_thumbnails, true)
-          create_posters = args[:create_posters] || 3
+          create_posters = args.fetch(:create_posters, 3)
           if (create_thumbnails or create_posters)
             logger.debug { 'Generating Thumbnails(s) and Poster Frame.' }
             args_out = { :item_id => item_id }
