@@ -91,6 +91,8 @@ module Vidispine
             else
               return obj.body
             end
+          elsif obj.content_type == 'application/xml'
+            return obj.body
           else
             return obj.body.inspect
           end
