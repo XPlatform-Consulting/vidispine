@@ -17,6 +17,7 @@ module Vidispine::API::Client::Requests
       # Body Parameters
       { :name => :path, :send_in => :body }
     ]
+
   end
 
 end
