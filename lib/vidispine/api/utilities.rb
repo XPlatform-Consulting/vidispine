@@ -175,6 +175,125 @@ module Vidispine
         { :field => _field, :group => _group }
       end
 
+      # {
+      #   "item": [
+      #     {
+      #       "metadata": {
+      #         "revision": "VX-348,VX-766,VX-350,VX-352,VX-767,VX-353,VX-816,VX-815,VX-346",
+      #         "group": [
+      #           "Film"
+      #         ],
+      #         "timespan": [
+      #           {
+      #             "start": "-INF",
+      #             "end": "+INF",
+      #             "field": [
+      #               {
+      #                 "name": "portal_mf778031",
+      #                 "uuid": "4150479f-b15e-475b-bc48-80ef85d3c2cf",
+      #                 "change": "VX-767",
+      #                 "user": "admin",
+      #                 "value": [
+      #                   {
+      #                     "uuid": "a7f91e7c-ffc6-4ba1-9658-3458bec886e9",
+      #                     "change": "VX-767",
+      #                     "user": "admin",
+      #                     "value": "556dd36a02a760d6bd000071",
+      #                     "timestamp": "2015-07-06T22:25:17.926+0000"
+      #                   }
+      #                 ],
+      #                 "timestamp": "2015-07-06T22:25:17.926+0000"
+      #               },
+      #               {
+      #                 "name": "portal_mf268857"
+      #               },
+      #               {
+      #                 "name": "portal_mf196812"
+      #               },
+      #               {
+      #                 "name": "portal_mf201890"
+      #               },
+      #               {
+      #                 "name": "portal_mf619153"
+      #               },
+      #               {
+      #                 "name": "portal_mf551902"
+      #               },
+      #               {
+      #                 "name": "portal_mf48881"
+      #               },
+      #               {
+      #                 "name": "portal_mf257027"
+      #               },
+      #               {
+      #                 "name": "portal_mf897662"
+      #               },
+      #               {
+      #                 "name": "portal_mf396149"
+      #               }
+      #             ],
+      #             "group": [
+      #
+      #             ]
+      #           }
+      #         ]
+      #       },
+      #       "id": "VX-84"
+      #     }
+      #   ]
+      # }
+      def self.transform_metadata_get_response_to_hash(_response, options = { })
+        items = _response['item'] || _response
+        item = items.first
+        item_metadata = item['metadata']
+        metadata = { }
+
+        # group = item_metadata['group'].first
+        timespans = item_metadata['timespan']
+        timespans.each do |t|
+          metadata.merge!(transform_metadata_group(t))
+        end
+        metadata
+      end
+
+      def transform_metadata_get_response_to_hash(_response, options = { })
+        self.class.transform_metadata_get_response_to_hash(_response, options)
+      end
+
+      def self.transform_metadata_group(group, breadcrumbs = [ ])
+        metadata = { }
+        name = group['name']
+
+        _breadcrumbs = breadcrumbs.dup << name
+        bc = _breadcrumbs.compact.join(':')
+        bc << ':' unless bc.empty?
+
+        groups = group['group']
+        if groups.length == 1 and (_group_name = groups.first).is_a?(String)
+          # group_name = _group_name.is_a?(String) ? _group_name : ''
+        else
+          # group_name = ''
+          groups.each do |g|
+            metadata.merge!(transform_metadata_group(g, _breadcrumbs))
+          end
+        end
+
+        fields = group['field']
+        fields.each do |f|
+          # field_name = "#{group_name}#{group_name.empty? ? '' : ':'}#{f['name']}"
+          field_name = "#{bc}#{f['name']}"
+          field_value_raw = f['value']
+          if field_value_raw.is_a?(Array)
+            field_value = field_value_raw.map { |v| v['value'] }
+            field_value = field_value.first if field_value.length == 1
+          else
+            field_value = field_value_raw
+          end
+          metadata[field_name] = field_value
+        end
+        metadata
+      end
+
       def build_item_search_document(criteria, options = { })
         fields = criteria[:fields] || criteria
         item_search_document = {
@@ -264,6 +383,23 @@ module Vidispine
 
 
       # Adds a file using the files path
+
+      # @param [Hash] args
+      # @option args [String] :file_path
+      # @option args [Hash|null] :storage_path_map
+      # @option args [String] :storage_method_type ('file')
+      # @option args [Hash] :metadata ({})
+      # @option args [Hash] :metadata_map ({})
+      # @option args [Hash] :file
+      # @option args [Boolean] :create_thumbnails (false)
+      # @option args [Integer|false] :create_posters (3)
+
+      # @param [Hash] options
+      # @option options [Boolean] :add_item_to_collection
+      # @option options [Boolean] :wait_for_transcode_job (false)
+      # @option options [Boolean] :skip_transcode_if_shape_with_tag_exists (true)
+      #
+      # @return [Hash]
       def item_add_using_file_path(args = { }, options = { })
         args = symbolize_keys(args, false)
         _response = { }
@@ -285,7 +421,7 @@ module Vidispine
         storage = storage_get(:id => storage) if storage.is_a?(String)
         _response[:storage] = storage
         storage_id = storage['id']
-        raise "Error Retrieving Storage Record. Storage: #{storage}" unless storage_id
+        raise "Error Retrieving Storage Record. Storage: #{storage.inspect}" unless storage_id
 
         # The method type of the URI to lookup
         storage_method_type = args[:storage_method_type] ||= 'file'
@@ -314,7 +450,7 @@ module Vidispine
         if file and !file['item']
           # If the passed file doesn't have an item then requery to verify that the item is absent
           storage_file_get_response = storage_file_get(:storage_id => storage_id, :file_id => file['id'], :include_item => true)
-          raise "Error Getting Storage File. '#{response.inspect}'" unless storage_file_get_response and storage_file_get_response['id']
+          raise "Error Getting Storage File. '#{storage_file_get_response.inspect}'" unless storage_file_get_response and storage_file_get_response['id']
           _response[:storage_file_get_response] = storage_file_get_response
 
           file = storage_file_get_response
@@ -348,7 +484,7 @@ module Vidispine
         item_id = item['id']
         shape = item['shape']
 
-        raise "Error Creating Placeholder: #{item}" unless item_id
+        raise "Error Creating Placeholder: #{item.inspect}" unless item_id
 
         # Add any additional metadata (Vidispine will only take one group at a time)
         metadata_documents.each do |metadata_document|
@@ -426,44 +562,6 @@ module Vidispine
         _response
       end
 
-      def item_add_shape_using_file_path(args = { }, options = { })
-        logger.debug { "#{__method__}:#{args.inspect}" }
-        _response = { }
-
-        storage_path_map = args[:storage_path_map]
-
-        item = args[:item] || { }
-        item_id = args[:item_id] || item['id']
-
-        tag = args[:tag]
-
-        file = args[:file] || { }
-        file_id = args[:file_id] || file['id']
-
-        unless file_id
-
-          storage = args[:storage] || { }
-          storage_id = args[:storage_id] || storage['id']
-
-          file_path = args[:file_path]
-          file_path_relative_to_storage_path = args[:relative_file_path]
-
-          unless file_path_relative_to_storage_path
-            process_file_path_response = process_file_path_using_storage_map(file_path, storage_path_map)
-            file_path_relative_to_storage_path = process_file_path_response[:relative_file_path]
-            storage_id ||= process_file_path_response[:storage_id]
-
-            file = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path)
-          end
-
-          file_id = file['id']
-          raise "File Error: #{file} Response: #{_response}" unless file_id
-        end
-
-        item_shape_import_args = { :item_id => item_id, :file_id => file_id, :tag => tag }
-        item_shape_import(item_shape_import_args)
-      end
-
       # Add an item to the system using file path metadata field as the key
       # 1. Search for pre existing asset
       # 2. Create a placeholder with metadata (if asset doesn't exist)
@@ -499,7 +597,7 @@ module Vidispine
 
         storage = storage_get(:id => storage) if storage.is_a?(String)
         _response[:storage] = storage
-        raise "Error Retrieving Storage Record. Storage Id: #{storage}" unless storage
+        raise "Error Retrieving Storage Record. Storage Id: #{storage.inspect}" unless storage
 
         storage_id = storage['id']
         storage_uri_raw = storage['method'].first['uri']
@@ -592,6 +690,53 @@ module Vidispine
         _response
       end
 
+      def item_shape_add_using_file_path(args = { }, options = { })
+        logger.debug { "#{__method__}:#{args.inspect}" }
+        _response = { }
+
+        storage_path_map = args[:storage_path_map]
+
+        item = args[:item] || { }
+        item_id = args[:item_id] || item['id']
+
+        tag = args[:tag]
+
+        file = args[:file] || { }
+        file_id = args[:file_id] || file['id']
+
+        unless file_id
+
+          storage = args[:storage] || { }
+          storage_id = args[:storage_id] || storage['id']
+
+          file_path = args[:file_path]
+          file_path_relative_to_storage_path = args[:relative_file_path]
+
+          unless file_path_relative_to_storage_path
+            if storage_id
+              # Process file path using storage information
+            else
+              process_file_path_response = process_file_path_using_storage_map(file_path, storage_path_map)
+            end
+
+            file_path_relative_to_storage_path = process_file_path_response[:relative_file_path]
+            storage_id ||= process_file_path_response[:storage_id]
+          end
+
+          file = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path)
+
+          file_id = file['id']
+          raise "File Error: #{file} Response: #{_response}" unless file_id
+        end
+
+        item_shape_import_args = { :item_id => item_id, :file_id => file_id, :tag => tag }
+        item_shape_import(item_shape_import_args)
+      end
+      alias :item_add_shape_using_file_path :item_shape_add_using_file_path
+
+      #
+      # @param [Hash] args
+      # @param [Hash] options
       def item_shapes_get_extended(args = { }, options = { })
         item_id = args[:item_id]
         return_as_hash = options.fetch(:return_as_hash, false)
@@ -602,7 +747,7 @@ module Vidispine
 
         shapes_response = item_shapes_get(:item_id => item_id)
 
-        shape_ids = shapes_response['uri']
+        shape_ids = shapes_response['uri'] || [ ]
         shapes = [ ]
         shape_ids.each do |shape_id|
           shape = item_shape_get(:item_id => item_id, :shape_id => shape_id)
@@ -612,7 +757,7 @@ module Vidispine
           shapes << shape
         end
 
-        shapes_formatted = return_as_hash ? Hash[ shapes.map { |v| [ v[key_by_field], v ] } ] : nil #shapes
+        shapes_formatted = return_as_hash ? Hash[ shapes.map { |v| [ v[key_by_field], v ] } ] : shapes
 
         shapes_response['shapes'] = shapes_formatted
         shapes_response
@@ -1185,6 +1330,7 @@ module Vidispine
         storages.each do |storage|
           storage_methods = storage['method']
           file_storage_method = storage_methods.find { |m| m['uri'].start_with?('file:') }
+          next unless file_storage_method
           uri = file_storage_method['uri']
           match = uri.match(/(.*):\/\/(.*)/)
           address = match[2]

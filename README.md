@@ -4,10 +4,10 @@
 
 ### Pre-requisites
 
-  [git](http://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-  [ruby](https://www.ruby-lang.org/en/documentation/installation/)
-  rubygems
-  [bundler](http://bundler.io/#getting-started)
+  - [git](http://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+  - [ruby](https://www.ruby-lang.org/en/documentation/installation/)
+  - rubygems
+  - [bundler](http://bundler.io/#getting-started)
 
 #### Install Pre-requisites on CentOS
 
