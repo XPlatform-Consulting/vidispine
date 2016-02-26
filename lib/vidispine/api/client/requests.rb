@@ -10,6 +10,8 @@ require 'vidispine/api/client/requests/item_metadata_get'
 require 'vidispine/api/client/requests/item_metadata_set'
 require 'vidispine/api/client/requests/item_transcode'
 
+require 'vidispine/api/client/requests/items_search'
+
 require 'vidispine/api/client/requests/search'
 
 require 'vidispine/api/client/requests/storage_file_create'

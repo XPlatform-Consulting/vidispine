@@ -312,7 +312,7 @@ module Vidispine
 
       # @return [Hash]
       def build_metadata_document(metadata_in, map = { }, options = { })
-        map = (options[:default_metadata_map] || default_metadata_map).merge(map.merge(options[:metadata_map] || { }))
+        map = (options[:default_metadata_map] || default_metadata_map).merge((options[:metadata_map] || { }).merge(map))
         groups = { }
         metadata_in.each do |k,v|
           _map = map[k]
@@ -739,13 +739,14 @@ module Vidispine
       # @param [Hash] options
       def item_shapes_get_extended(args = { }, options = { })
         item_id = args[:item_id]
+        tag = args[:tag]
         return_as_hash = options.fetch(:return_as_hash, false)
 
         if return_as_hash
           key_by_field = options[:hash_key] || 'id'
         end
 
-        shapes_response = item_shapes_get(:item_id => item_id)
+        shapes_response = item_shapes_get(:item_id => item_id, :tag => tag)
 
         shape_ids = shapes_response['uri'] || [ ]
         shapes = [ ]
@@ -766,29 +767,30 @@ module Vidispine
       # @param [Hash] args
       # @param [Hash] options
       # @option options [Boolean] :skip_if_shape_with_tag_exists
-      def item_transcode_extended(args = { }, options = { })
+      def item_transcode_shape(args = { }, options = { })
         _response = { }
         item_id = args[:item_id]
-        transcode_tag = args[:transcode_tag] || 'lowres'
+        transcode_tag = args[:tag] || args[:transcode_tag] || 'lowres'
         skip_if_tag_exists = options.fetch(:skip_if_shape_with_tag_exists, false)
 
         if skip_if_tag_exists
           item_shapes_response = item_shapes_get(:item_id => item_id, :tag => transcode_tag)
           shape_ids = item_shapes_response['uri'] || [ ]
           proxy_shape_id = shape_ids.last
-          _response[:tag_existed] = !!proxy_shape_id
+          _response[:tag_existed_on_shape] = !!proxy_shape_id
         end
 
         unless proxy_shape_id
-
           logger.debug { "Generating Transcode of the Item. Tag: '#{transcode_tag}'" }
           item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
           _response[:item_transcode] = item_transcode_response
 
           if options[:wait_for_transcode_job]
             job_id = item_transcode_response['jobId']
+            job_monitor_callback = options[:job_monitor_callback_function]
             job_monitor_response = wait_for_job_completion(:job_id => job_id) do |env|
               logger.debug { "Waiting for '#{transcode_tag}' Transcode Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
+              job_monitor_callback.call(env) if job_monitor_callback
             end
 
             last_response = job_monitor_response[:last_response]

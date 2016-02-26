@@ -192,6 +192,10 @@ module Vidispine
         process_request_using_class(Requests::ItemDelete, args, options)
       end
 
+      def item_export(args = { }, options = { })
+
+      end
+
       # @see http://apidoc.vidispine.com/latest/ref/item/item.html#get-information-about-a-single-item
       def item_get(args = { }, options = { })
         # item_id = args.is_a?(String) ? args : begin
@@ -431,28 +435,7 @@ module Vidispine
 
       # @see http://apidoc.vidispine.com/latest/ref/item/item.html#search-items
       def items_search(args = { }, options = { })
-        _request = Requests::BaseRequest.new(
-          args,
-          {
-            :http_path => 'item',
-            :http_method => :put,
-            :default_parameter_send_in_value => :matrix,
-            :parameters => [
-              { :name => :result, :send_in => :query },
-
-              :library,
-              :first,
-              :number,
-              :libraryId,
-              :autoRefresh,
-              :updateMode,
-              :updateFrequency,
-
-              { :name => :ItemSearchDocument, :send_in => :body }
-            ]
-          }.merge(options)
-        )
-        process_request(_request, options)
+        process_request_using_class(Requests::ItemsSearch, args, options)
       end
       alias :item_search :items_search
 
