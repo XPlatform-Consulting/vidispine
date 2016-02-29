@@ -530,7 +530,7 @@ module Vidispine
             wait_for_transcode_job = options[:wait_for_transcode_job]
             skip_transcode_if_shape_with_tag_exists = options.fetch(:skip_transcode_if_shape_with_tag_exists, true)
             [*transcode_tag].each do |_transcode_tag|
-              transcode_response = item_transcode_extended({
+              transcode_response = item_transcode_shape({
                                                              :item_id => item_id,
                                                              :transcode_tag => _transcode_tag
                                                            },
@@ -689,6 +689,34 @@ module Vidispine
 
         _response
       end
+
+      def item_export_extended(args = { }, options = { })
+        logger.debug { "#{__method__} Args: #{args.inspect} Opts: #{options.inspect}" }
+        _options = options.dup
+        wait_for_job_completion = _options.delete(:wait_for_job_completion) { }
+        item_export_response = item_export(args, _options)
+
+        if wait_for_job_completion
+          job_id = item_export_response['jobId']
+          job_monitor_callback = options[:job_monitor_callback_function]
+          job_monitor_response = wait_for_job_completion(:job_id => job_id) do |env|
+            logger.debug { "Waiting for '#{args.inspect}' Export Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
+            job_monitor_callback.call(env) if job_monitor_callback
+          end
+
+          last_response = job_monitor_response[:last_response]
+          if last_response['status'] == 'FINISHED'
+            data = last_response['data']
+            data = Hash[ data.map { |d| [ d['key'], d['value'] ] } ]
+
+          end
+
+          # if wait_for_transcode_job
+        end
+
+        last_response || item_export_response
+      end
+
 
       def item_shape_add_using_file_path(args = { }, options = { })
         logger.debug { "#{__method__}:#{args.inspect}" }
