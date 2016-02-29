@@ -192,8 +192,9 @@ module Vidispine
         process_request_using_class(Requests::ItemDelete, args, options)
       end
 
+      # http://apidoc.vidispine.com/latest/ref/item/export.html#item-export
       def item_export(args = { }, options = { })
-
+        process_request_using_class(Requests::ItemExport, args, options)
       end
 
       # @see http://apidoc.vidispine.com/latest/ref/item/item.html#get-information-about-a-single-item

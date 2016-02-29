@@ -6,6 +6,7 @@ require 'vidispine/api/client/requests/import_sidecar_file'
 require 'vidispine/api/client/requests/import_using_uri'
 
 require 'vidispine/api/client/requests/item_delete'
+require 'vidispine/api/client/requests/item_export'
 require 'vidispine/api/client/requests/item_metadata_get'
 require 'vidispine/api/client/requests/item_metadata_set'
 require 'vidispine/api/client/requests/item_transcode'
