@@ -33,8 +33,8 @@ module Vidispine::API::Client::Requests
     def after_process_parameters
       # Path Needs to be escaped twice, so we do it once here and then again when the query is built
       # @see http://apidoc.vidispine.com/4.2.6/storage/uri.html#api-calls
-      _path = arguments[:path]
-      arguments[:path] = CGI.escape(_path).gsub('+', '%20') if _path
+      # _path = arguments[:path]
+      # arguments[:path] = CGI.escape(_path).gsub('+', '%20') if _path
     end
 
   end
