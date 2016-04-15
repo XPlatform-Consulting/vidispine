@@ -381,7 +381,7 @@ module Vidispine
         process_request(_request, options)
       end
 
-        # @see http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job
+      # @see http://apidoc.vidispine.com/4.2/ref/item/transcode.html#start-an-item-transcode-job
       def item_transcode(args = { }, options = { })
         process_request_using_class(Requests::ItemTranscode, args, options)
       end

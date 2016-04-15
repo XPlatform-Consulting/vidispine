@@ -47,7 +47,7 @@ module Vidispine
         # 3 Get Collection
         collection_id = args[:collection_id] || collection['id']
         unless collection_id
-          collection_name = args[:collection_name]
+          collection_name = args[:collection_name] || args[:name]
           unless collection_name
             file_path_collection_name_position = args[:file_path_collection_name_position]
             raise ArgumentError, ':collection_id, :collection_name, or :file_path_collection_name_position argument is required.' unless file_path_collection_name_position
@@ -175,6 +175,8 @@ module Vidispine
         { :field => _field, :group => _group }
       end
 
+      # Reads an item's metadata array and return a hash version of the metadata
+      #
       # {
       #   "item": [
       #     {
@@ -205,27 +207,6 @@ module Vidispine
       #                 "timestamp": "2015-07-06T22:25:17.926+0000"
       #               },
       #               {
-      #                 "name": "portal_mf268857"
-      #               },
-      #               {
-      #                 "name": "portal_mf196812"
-      #               },
-      #               {
-      #                 "name": "portal_mf201890"
-      #               },
-      #               {
-      #                 "name": "portal_mf619153"
-      #               },
-      #               {
-      #                 "name": "portal_mf551902"
-      #               },
-      #               {
-      #                 "name": "portal_mf48881"
-      #               },
-      #               {
-      #                 "name": "portal_mf257027"
-      #               },
-      #               {
       #                 "name": "portal_mf897662"
       #               },
       #               {
@@ -242,6 +223,9 @@ module Vidispine
       #     }
       #   ]
       # }
+      #
+      # @param [Hash] _response A vidispine item or hash with the item key
+      # @return [Hash]
       def self.transform_metadata_get_response_to_hash(_response, options = { })
         items = _response['item'] || _response
         item = items.first
@@ -260,6 +244,9 @@ module Vidispine
         self.class.transform_metadata_get_response_to_hash(_response, options)
       end
 
+      # @param [Hash] group
+      # @param [Array] breadcrumbs
+      # @return [Hash]
       def self.transform_metadata_group(group, breadcrumbs = [ ])
         metadata = { }
         name = group['name']
@@ -294,6 +281,8 @@ module Vidispine
         metadata
       end
 
+      # @param [Hash] criteria
+      # @return [Hash]
       def build_item_search_document(criteria, options = { })
         fields = criteria[:fields] || criteria
         item_search_document = {
@@ -310,6 +299,12 @@ module Vidispine
         item_search_document
       end
 
+      # @param [Hash] metadata_in
+      # @param [Hash] map A hash of alias field names to vidispine field or field and groups.
+      #   Will merge into @default_metadata_map, options[:default_metadata_map], and options[:metadata_map]
+      # @param [Hash] options
+      # @option options [Hash] :default_metadata_map Allows for overriding @default_metadata_map
+      # @option options [Hash] :metadata_map An option for passing the map in options
       # @return [Hash]
       def build_metadata_document(metadata_in, map = { }, options = { })
         map = (options[:default_metadata_map] || default_metadata_map).merge((options[:metadata_map] || { }).merge(map))
@@ -381,9 +376,59 @@ module Vidispine
         docs
       end
 
+      # Searches for a collection by name and if a match is not found then a new collection is created
+      # This method will only return the first match if an existing collection is found.
+      #
+      # @param [Hash] args
+      # @option args [String] :collection_name
+      # @param [Hash] options
+      # @option options [Boolean] :case_sensitive (true)
+      #
+      # @return [Hash]
+      def collection_create_if_not_exists(args = { }, options = { })
+        return args.map { |v| collection_create_if_not_exists(v, options) } if args.is_a?(Array)
+        args = args.is_a?(Hash) ? args : { :collection_name => args }
+
+        collection_name = args[:collection_name] || args[:name]
+        raise ArgumentError, 'collection_name is required.' unless collection_name
+        case_sensitive = options.fetch(:case_sensitive, true)
+
+        collection = collection_get_by_name( :collection_name => collection_name, :case_sensitive => case_sensitive )
+        collection_already_existed = collection && !collection.empty? ? true : false
+        collection ||= collection_create(collection_name)
+        options[:extended_response] ?
+            { :collection => collection, :collection_already_existed => collection_already_existed } :
+            collection
+      end
+
+      # Searches for a collection by name
+      # @param [Hash] args
+      # @option args [String] :collection_name
+      # @param [Hash] options
+      # @option options [Boolean] :return_first_match (true)
+      # @option options [Boolean] :case_sensitive (true)
+      #
+      # @return [Hash|Array|nil]
+      def collection_get_by_name(args = { }, options = { })
+        return collection_create_if_not_exists(args, options) if options[:collection_create_if_not_exists]
+        args = args.is_a?(Hash) ? args : { :collection_name => args }
+
+        collection_name = args[:collection_name] || args[:name]
+        return_first_match = options.fetch(:return_first_match, true)
+
+        unless collection_name
+          raise ArgumentError, 'collection_name is required.'
+        end
+
+        collections = ( (collections_get || { })['collection'] || [ ] )
+
+        comparison_method, comparison_value = options.fetch(:case_sensitive, true) ? [ :eql?, true ] : [ :casecmp, 0 ]
+        collections_search_method = return_first_match ? :find : :select
+        collections.send(collections_search_method) { |c| c['name'].send(comparison_method, collection_name) == comparison_value }
+      end
 
       # Adds a file using the files path
-
+      #
       # @param [Hash] args
       # @option args [String] :file_path
       # @option args [Hash|null] :storage_path_map
@@ -393,7 +438,7 @@ module Vidispine
       # @option args [Hash] :file
       # @option args [Boolean] :create_thumbnails (false)
       # @option args [Integer|false] :create_posters (3)
-
+      #
       # @param [Hash] options
       # @option options [Boolean] :add_item_to_collection
       # @option options [Boolean] :wait_for_transcode_job (false)
@@ -982,48 +1027,9 @@ module Vidispine
         _response
       end
 
-      # Searches for a collection by name and if a match is not found then a new collection is created
-      # This method will only return the first match if an existing collection is found.
-      def collection_create_if_not_exists(args = { }, options = { })
-        return args.map { |v| collection_create_if_not_exists(v, options) } if args.is_a?(Array)
-        args = args.is_a?(Hash) ? args : { :collection_name => args }
-
-        collection_name = args[:collection_name]
-        raise ArgumentError, 'collection_name is required.' unless collection_name
-        case_sensitive = options.fetch(:case_sensitive, true)
-
-        collection = collection_get_by_name( :collection_name => collection_name, :case_sensitive => case_sensitive )
-        collection_already_existed = collection ? true : false
-        collection ||= collection_create(collection_name)
-        options[:extended_response] ?
-            { :collection => collection, :collection_already_existed => collection_already_existed } :
-            collection
-      end
-
-      # Searches for a collection by name
-      # @param [Hash] args
-      # @option args [String] :collection_name
-      # @option args [Boolean] :return_first_match (true)
-      # @option args [Boolean] :case_sensitive (true)
-      def collection_get_by_name(args = { }, options = { })
-        return collection_create_if_not_exists(args, options) if options[:collection_create_if_not_exists]
-        args = args.is_a?(Hash) ? args : { :collection_name => args }
-
-        collection_name = args[:collection_name] || args[:name]
-        return_first_match = options.fetch(:return_first_match, true)
-
-        unless collection_name
-          raise ArgumentError, 'collection_name is required.'
-        end
-
-        collections = ( (collections_get || { })['collection'] || [ ] )
-
-        comparison_method, comparison_value = options.fetch(:case_sensitive, true) ? [ :eql?, true ] : [ :casecmp, 0 ]
-        collections_search_method = return_first_match ? :find : :select
-        collections.send(collections_search_method) { |c| c['name'].send(comparison_method, collection_name) == comparison_value }
-      end
-
       # SEQUENCE THAT CREATES AN ITEM AND THE PROXY USING THE FILE ID
+      # @deprecated
+      #
       # @param [Hash] args
       # @option args [String] :original_file_path
       # @option args [String] :lowres_file_path
@@ -1031,6 +1037,8 @@ module Vidispine
       # @option args [Hash] :placeholder_args ({ :container => 1, :video => 1 })
       # @option args [Boolean] :create_posters (False)
       # @option args [Boolean] :create_thumbnails (True)
+      #
+      # @return [Hash] :item_id, :original_file_id, :lowres_file_id
       def item_create_with_proxy_using_storage_file_paths(args = { }, options = { })
 
         original_file_path = args[:original_file_path] || args[:original]
@@ -1084,6 +1092,7 @@ module Vidispine
       end
 
       # SEQUENCE THAT CREATE AN ITEM AND THE PROXY USING THE FILE URI/PATH
+      # @deprecated
       def item_create_with_proxy_using_file_uri(args = { }, options = { })
         original_file_uri = args[:original_file_uri] || args[:original]
         file_type = args[:file_type] || 'video'
@@ -1235,7 +1244,7 @@ module Vidispine
           dir_path_relative_to_storage = dir.sub(volume_path, '')
 
           storage = storage_get(:id => storage) if storage.is_a?(String)
-          raise 'Error Retrieving Storage Record. Storage Id: #{' unless storage
+          raise 'Error Retrieving Storage Record' unless storage
 
           storage_id = storage['id']
           _args[:storage_id] = storage_id
@@ -1269,32 +1278,61 @@ module Vidispine
       # @option args [Hash] :storage_path_map
       # @option args [Boolean] :create_if_not_exists (True)
       # @option args [Boolean] :include_item (True)
+      # @return [Hash|nil]
       def storage_file_get_using_file_path(args = { })
         _response = { }
         file_path = args[:file_path]
-        storage_path_map = args[:storage_path_map] || storage_file_path_map_create
-        storage_path_map = storage_file_path_map_create if storage_path_map.empty?
+        return_extended_response = args.fetch(:extended_response, true)
+        volume_path = args[:volume_path]
 
-        volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path) }
-        raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
 
-        file_path_relative_to_storage_path = file_path.sub(volume_path, '')
-        logger.debug { "File Path Relative to Storage Path: #{file_path_relative_to_storage_path}" }
+        # The method type of the URI to lookup
+        storage_method_type = (args[:storage_method_type] ||= 'file').to_s.downcase
+        logger.debug { "Storage Method Type: '#{storage_method_type}'" }
+
+        storage_path_map = args[:storage_path_map]
+        storage_path_map = storage_file_path_map_create(:storage_method => storage_method_type) unless storage_path_map && !storage_path_map.empty?
+        logger.debug { "Storage Path Map: #{storage_path_map.inspect}" }
+
+        sm_volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path) }
+        raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless sm_volume_path
 
         storage = storage_get(:id => storage) if storage.is_a?(String)
         _response[:storage] = storage
         storage_id = storage['id']
         raise "Error Retrieving Storage Record. Storage: #{storage}" unless storage_id
+        logger.debug { "Storage ID: #{storage_id}" }
 
-        # The method type of the URI to lookup
-        storage_method_type = args[:storage_method_type] ||= 'file'
+        ## Storage Determined Now Start Digging for the File
 
-        storage_uri_method = "#{storage_method_type}:"
-        storage_uri_raw = (storage['method'].find { |v| v['uri'].start_with?(storage_uri_method) } || { })['uri'] rescue nil
-        raise "Error Getting URI from Storage Method. Storage: #{storage.inspect}" unless storage_uri_raw
-        storage_uri = URI.parse(storage_uri_raw)
 
-        vidispine_file_path = File.join(storage_uri.path, file_path_relative_to_storage_path)
+        case storage_method_type
+          when 'file', 'http', 's3'
+            storage_uri_method = "#{storage_method_type}:"
+            storage_uri_raw = (storage['method'].find do |v|
+              ((v['lastSuccess'] || '') >= (v['lastFailure'] || '')) && (storage_method_type == 'any' || v['uri'].start_with?(storage_uri_method))
+            end || { })['uri'] rescue nil
+            raise "Error Getting URI from Storage Method. Storage: #{storage.inspect}" unless storage_uri_raw
+            storage_uri = URI.parse(storage_uri_raw)
+
+            if storage_method_type == 's3'
+              volume_path = "#{storage_uri.host}/"
+            else
+              volume_path = storage_uri.path
+            end
+          when 'vxa'
+
+            vxa_local_path = storage['metadata']['field'].find { |m| m['key'] == 'vxaLocalPath' }['value']
+            volume_path = vxa_local_path
+          else
+            volume_path = sm_volume_path
+        end unless volume_path
+        logger.debug { "Volume Path: '#{volume_path}'" }
+
+        file_path_relative_to_storage_path = file_path.sub(volume_path, '')
+        logger.debug { "File Path Relative to Storage Path: '#{file_path_relative_to_storage_path}'" }
+
+        vidispine_file_path = File.join(volume_path, file_path_relative_to_storage_path)
         logger.debug { "Vidispine File Path: '#{vidispine_file_path}'" }
 
         create_if_not_exists = args.fetch(:create_if_not_exists, true)
@@ -1309,12 +1347,15 @@ module Vidispine
           file = ((storage_file_get_response || { })['file'] || [ ]).first
         end
 
-        file
+        _response[:file] = file
+
+        return_extended_response ? _response : file
       end
 
       # Will search for a relative file path on a storage and if not found will trigger a storage_file_create
       # @param [String] storage_id
       # @param [String] file_path_relative_to_storage_path
+      # @return [Hash]
       def storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, options = { })
         logger.debug { "Method: #{__method__} Args:#{{:storage_id => storage_id, :file_path_relative_to_storage_path => file_path_relative_to_storage_path, :options => options }.inspect}" }
         include_item = options.fetch(:include_item, true)
@@ -1352,14 +1393,20 @@ module Vidispine
       # Generates a storage file path map from the current storages.
       # This is meant as a default, on most methods you can provide your own storage map that can be used to resolve
       # local paths to storage paths.
-      # This particular method is builds using file method addresses only.
-      def storage_file_path_map_create
+      #
+      # @param [Hash] args
+      # @option args [String] :storage_method ('file')
+      #
+      # @return [Hash]
+      def storage_file_path_map_create(args = {})
+        method = args[:storage_method] || 'file'
+
         storages_response = storages_get
         storages = storages_response['storage']
         storage_file_path_map = { }
         storages.each do |storage|
           storage_methods = storage['method']
-          file_storage_method = storage_methods.find { |m| m['uri'].start_with?('file:') }
+          file_storage_method = storage_methods.find { |m| m['uri'].start_with?("#{method}:") }
           next unless file_storage_method
           uri = file_storage_method['uri']
           match = uri.match(/(.*):\/\/(.*)/)
@@ -1369,10 +1416,26 @@ module Vidispine
         storage_file_path_map
       end
 
+      # Waits for a job to complete
+      #
       # @param [Hash] args
       # @option args [String] :job_id (Required)
       # @option args [Integer] :delay (15)
       # @option args [Integer] :timeout The timeout in seconds
+      #
+      # Accepts a block where the following is exposed:
+      #   :time_started [TIme]
+      #   :poll_interval [Integer]
+      #   :latest_response [Hash]
+      #   :job_status [String]
+      #   :continue_monitoring [Boolean] Can be set to false and job monitoring will exit
+      #   :delay [Integer]
+      #
+      # @return [Hash]
+      #   :last_response [Hash]
+      #   :time_started [Time]
+      #   :time_ended [Time]  Includes the last poll interval
+      #   :timed_out [Boolean]
       def wait_for_job_completion(args = { })
         job_id = args[:job_id]
         raise ArgumentError, 'job_id is a required argument.' unless job_id
@@ -1410,8 +1473,9 @@ module Vidispine
 
           sleep(delay)
         end
+        time_ended = Time.now
 
-        { :last_response => _response, :time_started => time_started, :timed_out => timed_out }
+        { :last_response => _response, :time_started => time_started, :time_ended => time_ended, :timed_out => timed_out }
       end
 
       # Utilities
