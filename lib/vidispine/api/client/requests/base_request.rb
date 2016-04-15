@@ -40,26 +40,6 @@ module Vidispine
 
             params.each do |param|
               process_parameter(param, args, args_out, missing_required_arguments, processed_parameters, default_parameter_send_in_value)
-              # _k = param.is_a?(Hash) ? param : { :name => param, :required => false, :send_in => default_parameter_send_in_value }
-              # _k[:send_in] ||= default_parameter_send_in_value
-              #
-              # proper_parameter_name = _k[:name]
-              # param_name = normalize_parameter_name(proper_parameter_name)
-              # arg_key = (has_key = args.has_key?(param_name)) ?
-              #     param_name :
-              #     ( (_k[:aliases] || [ ]).map { |a| a.to_s }.find { |a| has_key = args.has_key?(a) } || param_name )
-              #
-              # value = has_key ? args[arg_key] : _k[:default_value]
-              # is_set = has_key || _k.has_key?(:default_value)
-              #
-              # processed_parameters[proper_parameter_name] = _k.merge(:value => value, :is_set => is_set)
-              #
-              # unless is_set
-              #   missing_required_arguments << proper_parameter_name if _k[:required]
-              #   next
-              # end
-              #
-              # args_out[proper_parameter_name] = value
             end
             { :arguments_out => args_out, :processed_parameters => processed_parameters, :missing_required_arguments => missing_required_arguments }
           end
@@ -148,32 +128,6 @@ module Vidispine
             self.class.process_parameters(params, args, options.merge(:processed_parameters => processed_parameters, :missing_required_arguments => missing_required_arguments, :default_parameter_send_in_value => default_parameter_send_in_value, :arguments_out => arguments))
             after_process_parameters unless options.fetch(:skip_after_process_parameters, false)
 
-            # args = normalize_argument_hash_keys(args) || { }
-            # args_out = { }
-            #
-            # params.each do |k|
-            #   _k = k.is_a?(Hash) ? k : { :name => k, :required => false, :send_in => default_parameter_send_in_value }
-            #   _k[:send_in] ||= default_parameter_send_in_value
-            #
-            #   proper_parameter_name = _k[:name]
-            #   param_name = normalize_parameter_name(proper_parameter_name)
-            #   arg_key = (has_key = args.has_key?(param_name)) ?
-            #       param_name :
-            #       ( (_k[:aliases] || [ ]).map { |a| a.to_s }.find { |a| has_key = args.has_key?(a) } || param_name )
-            #
-            #   value = has_key ? args[arg_key] : _k[:default_value]
-            #   is_set = has_key || _k.has_key?(:default_value)
-            #
-            #   processed_parameters[proper_parameter_name] = _k.merge(:value => value, :is_set => is_set)
-            #
-            #   unless is_set
-            #     @missing_required_arguments << proper_parameter_name if _k[:required]
-            #     next
-            #   end
-            #
-            #   args_out[proper_parameter_name] = value
-            # end
-            # args_out
           end
 
           def before_process_parameters
