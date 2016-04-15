@@ -27,7 +27,8 @@ module Vidispine::API::Client::Requests
 
     def after_process_parameters
       # URI Needs to be escaped twice, so we do it once here and then again when the query is built
-      arguments[:uri] = CGI.escape(arguments[:uri])
+      _uri = arguments[:uri]
+      arguments[:uri] = CGI.escape(_uri) if _uri
     end
 
   end
