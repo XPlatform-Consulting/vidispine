@@ -41,6 +41,29 @@ module Vidispine
       # ############################################################################################################## #
       # @!group API Endpoints
 
+      def collection_access_add(args = { }, options = { })
+        process_request_using_class(Requests::CollectionAccessAdd, args, options)
+      end
+
+      def collection_access_delete(args = { }, options = { })
+        process_request_using_class(Requests::CollectionAccessDelete, args, options)
+      end
+
+      # @see http://apidoc.vidispine.com/latest/ref/access-control.html#retrieve-a-specific-access-control-entry
+      def collection_access_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+            args,
+            {
+                :http_path => 'collection/#{path_arguments[:collection_id]}/access/#{path_arguments[:access_id]}',
+                :parameters => [
+                    { :name => :collection_id, :aliases => [ :id ], :send_in => :path, :required => true },
+                    { :name => :access_id, :send_in => :path },
+                ]
+            }.merge(options)
+        )
+        process_request(_request, options)
+      end
+      
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#create-a-collection
       def collection_create(args = { })
         collection_name = args.is_a?(String) ? args : begin
@@ -175,6 +198,44 @@ module Vidispine
         process_request_using_class(Requests::ImportUsingURI, args, options)
       end
       alias :import :import_using_uri
+
+      def item_access_add(args = { }, options = { })
+        process_request_using_class(Requests::ItemAccessAdd, args, options)
+      end
+
+      def item_access_delete(args = { }, options = { })
+        process_request_using_class(Requests::ItemAccessDelete, args, options)
+      end
+
+      # @see http://apidoc.vidispine.com/latest/ref/access-control.html#retrieve-a-specific-access-control-entry
+      def item_access_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'item/#{path_arguments[:item_id]}/access/#{path_arguments[:access_id]}',
+            :parameters => [
+              { :name => :item_id, :aliases => [ :id ], :send_in => :path, :required => true },
+              { :name => :access_id, :send_in => :path },
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
+      # @see http://apidoc.vidispine.com/latest/ref/access-control.html#retrieve-access-control-list-for-an-item
+      def item_access_list(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'item/#{path_arguments[:item_id]}/access',
+            :parameters => [
+              { :name => :item_id, :aliases => [ :id ], :send_in => :path, :required => true },
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
 
       # @see http://apidoc.vidispine.com/4.2/ref/item/item.html#list-collections-that-contain-an-item
       def item_collections_get(args = { }, options = { })
