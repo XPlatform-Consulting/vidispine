@@ -1,10 +1,15 @@
 require 'vidispine/api/client/requests/base_request'
 
+require 'vidispine/api/client/requests/collection_access_add'
+require 'vidispine/api/client/requests/collection_access_delete'
+
 require 'vidispine/api/client/requests/import_placeholder'
 require 'vidispine/api/client/requests/import_placeholder_item'
 require 'vidispine/api/client/requests/import_sidecar_file'
 require 'vidispine/api/client/requests/import_using_uri'
 
+require 'vidispine/api/client/requests/item_access_add'
+require 'vidispine/api/client/requests/item_access_delete'
 require 'vidispine/api/client/requests/item_delete'
 require 'vidispine/api/client/requests/item_export'
 require 'vidispine/api/client/requests/item_metadata_get'
