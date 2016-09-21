@@ -7,6 +7,8 @@ module Vidispine
 
       class HTTPClient
 
+        class HTTPAuthorizationError < RuntimeError; end
+
         attr_accessor :logger, :http, :http_host_address, :http_host_port, :base_uri
         attr_accessor :username, :password
 
@@ -15,7 +17,7 @@ module Vidispine
 
         attr_accessor :log_request_body, :log_response_body, :log_pretty_print_body
 
-        attr_accessor :request, :response
+        attr_accessor :request, :response, :use_exceptions
 
         DEFAULT_HTTP_HOST_ADDRESS = 'localhost'
         DEFAULT_HTTP_HOST_PORT = 8080
@@ -29,6 +31,9 @@ module Vidispine
 
         def initialize(args = { })
           args = args.dup
+
+          @use_exceptions = args.fetch(:use_exceptions, true)
+
           initialize_logger(args)
           initialize_http(args)
 
@@ -76,6 +81,11 @@ module Vidispine
           @http_host_port = args[:http_host_port] ||= DEFAULT_HTTP_HOST_PORT
           @http = Net::HTTP.new(http_host_address, http_host_port)
 
+          use_ssl = args[:http_host_use_ssl]
+          if use_ssl
+            # @TODO Add SSL Support
+          end
+
           http
         end
 
@@ -107,18 +117,22 @@ module Vidispine
           @response = http.request(request)
           logger.debug { %(RESPONSE: #{response.inspect} HEADERS: #{response.to_hash.inspect} #{log_response_body and response.respond_to?(:body) ? "\n-- BODY BEGIN --\n#{format_body_for_log_output(response)}\n-- BODY END--" : ''}) }
           #logger.debug { "Parse Response? #{@parse_response}" }
+
+          raise HTTPAuthorizationError if @use_exceptions && @response.code == '401'
+
           @parse_response ? response_parsed : response.body
         end
 
         def response_parsed
           @response_parsed ||= begin
-            logger.debug { "Parsing Response. #{response.body.inspect}" }
+            response_body = response.respond_to?(:body) ? response.body : ''
+            logger.debug { "Parsing Response. #{response_body.inspect}" }
 
             case response.content_type
             when 'application/json'
-            JSON.parse(response.body) # rescue response
+               response_body.empty? ? response_body : JSON.parse(response_body) # rescue response
              else
-               response.body
+               response_body
             end
           end
         end
