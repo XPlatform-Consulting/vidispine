@@ -64,7 +64,7 @@ module Vidispine
           #collection = collection_create_if_not_exists(:collection_name => collection_name)
           collection = collection_get_by_name({ :collection_name => collection_name }, options)
         else
-          collection ||= collection_get(:collection_id => collection_id)
+          collection = collection_get(:collection_id => collection_id)
           raise ArgumentError, 'Collection not found.' unless collection and collection['id']
         end
         collection
@@ -320,6 +320,10 @@ module Vidispine
           end
         end
 
+        map_options = map[:__build_metadata_document_options] || map['__build_metadata_document_options'] || { }
+        options.merge!(map_options)
+        parent_group_name = options[:parent_group_name]
+
         _field = groups.delete(nil) { { } }.map { |fname, values| { :name => fname, :value => [*values].map { |v| { :value => v } } } }
         _group = groups.map { |name, fields| { :name => name, :field => fields.map { |fname, values| { :name => fname, :value => [*values].map { |v| { :value => v } } } } } }
 
@@ -328,19 +332,18 @@ module Vidispine
         # metadata_out[:group] = _group unless _group.empty?
         # metadata_out
 
-        if (!_field.empty? && !_group.empty?) || _group.length > 1
-          logger.warn { 'Multiple metadata groups were specified but only one group will be ingested by Vidispine.' }
-        end
-
         #{ :field => _field, :group => _group }
-        if _field.empty? && _group.length == 1
+        if (_field.empty? && _group.length == 1 && (!parent_group_name || parent_group_name.empty?))
           _group = _group.first
           group_name = _group[:name]
           group_fields = _group[:field]
           return { :group => [ group_name ], :timespan => [ { :start => '-INF', :end => '+INF', :field => group_fields } ] }
         end
 
-        { :timespan => [ { :start => '-INF', :end => '+INF', :field => _field, :group => _group } ] }
+        _data_out = { :timespan => [ { :start => '-INF', :end => '+INF', :field => _field, :group => _group } ] }
+        _data_out[:group] ||= [ parent_group_name ] if parent_group_name
+
+        _data_out
       end
 
       # @return [Array]
