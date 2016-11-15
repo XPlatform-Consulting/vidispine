@@ -52,14 +52,14 @@ module Vidispine
       # @see http://apidoc.vidispine.com/latest/ref/access-control.html#retrieve-a-specific-access-control-entry
       def collection_access_get(args = { }, options = { })
         _request = Requests::BaseRequest.new(
-            args,
-            {
-                :http_path => 'collection/#{path_arguments[:collection_id]}/access/#{path_arguments[:access_id]}',
-                :parameters => [
-                    { :name => :collection_id, :aliases => [ :id ], :send_in => :path, :required => true },
-                    { :name => :access_id, :send_in => :path },
-                ]
-            }.merge(options)
+          args,
+          {
+            :http_path => 'collection/#{path_arguments[:collection_id]}/access/#{path_arguments[:access_id]}',
+            :parameters => [
+              { :name => :collection_id, :aliases => [ :id ], :send_in => :path, :required => true },
+              { :name => :access_id, :send_in => :path },
+            ]
+          }.merge(options)
         )
         process_request(_request, options)
       end
@@ -116,6 +116,12 @@ module Vidispine
         end
         http(:get, "/collection/#{collection_id}/metadata")
       end
+
+      # @see http://apidoc.vidispine.com/4.2/ref/collection.html#update-collection-metadata
+      def collection_metadata_set(args = { }, options = { })
+        process_request_using_class(Requests::CollectionMetadataSet, args, options)
+      end
+      alias :collection_metadata_update :collection_metadata_set
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#add-an-item-library-or-collection-to-a-collection
       def collection_object_add(args = { }, options = { })
@@ -410,6 +416,26 @@ module Vidispine
         query[:jobmetadata] = job_metadata if job_metadata
 
         http(:post, "/item/#{item_id}/shape", '', :query => query)
+      end
+
+      def item_sidecar_import(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'import/sidecar/#{path_arguments[:item_id]}',
+            :http_method => :post,
+            :parameters => [
+              { :name => :item_id, :send_in => :path, :required => true },
+
+              :sidecar,
+              :notification,
+              :notificationData,
+              :priority,
+              :jobmetadata,
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
       end
 
       # @see http://apidoc.vidispine.com/latest/ref/item/thumbnail.html#start-a-thumbnail-job

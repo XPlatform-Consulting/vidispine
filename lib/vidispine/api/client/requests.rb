@@ -2,6 +2,7 @@ require 'vidispine/api/client/requests/base_request'
 
 require 'vidispine/api/client/requests/collection_access_add'
 require 'vidispine/api/client/requests/collection_access_delete'
+require 'vidispine/api/client/requests/collection_metadata_set'
 
 require 'vidispine/api/client/requests/import_placeholder'
 require 'vidispine/api/client/requests/import_placeholder_item'
