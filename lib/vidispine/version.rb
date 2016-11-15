@@ -1,3 +1,3 @@
 module Vidispine
-  VERSION = '1.1.11'
+  VERSION = '1.3.0'
 end
