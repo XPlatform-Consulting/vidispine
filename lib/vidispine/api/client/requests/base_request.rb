@@ -176,7 +176,7 @@ module Vidispine
             @parameters ||= self.class::PARAMETERS.dup
           end
 
-          # The URI Path
+          # The URI Path including "matrix" arguments
           def path
             @path ||= [ path_only ].concat( [*matrix].delete_if { |v| v.respond_to?(:empty?) and v.empty? } ).join('')
           end
@@ -185,7 +185,7 @@ module Vidispine
           def path_arguments
             @path_arguments ||= Hash[
                 arguments.dup.delete_if { |k, _| processed_parameters[k][:send_in] != :path }.
-                    map { |k,v| [ k, CGI.escape(v.respond_to?(:to_s) ? v.to_s : '') ] }
+                    map { |k,v| [ k, CGI.escape(v.respond_to?(:to_s) ? v.to_s : '').gsub('+', '%20') ] }
             ]
           end
 
@@ -195,7 +195,7 @@ module Vidispine
 
           def query
             @query ||= begin
-              query_arguments.is_a?(Hash) ? query_arguments.map { |k,v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v)}" }.join('&') : query_arguments
+              query_arguments.is_a?(Hash) ? query_arguments.map { |k,v| "#{CGI.escape(k.to_s).gsub('+', '%20')}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v).gsub('+', '%20')}" }.join('&') : query_arguments
             end
           end
 
@@ -204,7 +204,7 @@ module Vidispine
           end
 
           def matrix
-            @matrix = matrix_arguments.map { |k,v| ";#{CGI.escape(k.to_s)}=#{CGI.escape(v.to_s)}" }.join('')
+            @matrix = matrix_arguments.map { |k,v| ";#{CGI.escape(k.to_s).gsub('+', '%20')}=#{CGI.escape(v.to_s).gsub('+', '%20')}" }.join('')
           end
 
           def matrix_arguments
@@ -213,6 +213,11 @@ module Vidispine
 
           def uri_request_path
             [ path_with_matrix ].concat( [*query].delete_if { |v| v.respond_to?(:empty?) and v.empty? } ).join('?')
+          end
+
+          def success?
+            _response = client.http_client.response
+            _response && _response.code == HTTP_SUCCESS_CODE
           end
 
           # @!endgroup
