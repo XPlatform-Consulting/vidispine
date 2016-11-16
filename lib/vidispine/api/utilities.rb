@@ -228,8 +228,8 @@ module Vidispine
       # @return [Hash]
       def self.transform_metadata_get_response_to_hash(_response, options = { })
         items = _response['item'] || _response
-        item = items.first
-        item_metadata = item['metadata']
+        item = items.is_a?(Array) ? items.first : items
+        item_metadata = item['metadata'] || item
         metadata = { }
 
         # group = item_metadata['group'].first
@@ -306,8 +306,8 @@ module Vidispine
       # @option options [Hash] :default_metadata_map Allows for overriding @default_metadata_map
       # @option options [Hash] :metadata_map An option for passing the map in options
       # @return [Hash]
-      def build_metadata_document(metadata_in, map = { }, options = { })
-        map = (options[:default_metadata_map] || default_metadata_map).merge((options[:metadata_map] || { }).merge(map))
+      def self.build_metadata_document(metadata_in, map = { }, options = { })
+        # map = (options[:default_metadata_map]).merge((options[:metadata_map] || { }).merge(map))
         groups = { }
         metadata_in.each do |k,v|
           _map = map[k]
@@ -344,6 +344,11 @@ module Vidispine
         _data_out[:group] ||= [ parent_group_name ] if parent_group_name
 
         _data_out
+      end
+
+      def build_metadata_document(metadata_in, map = { }, options = { })
+        map = (options[:default_metadata_map] || default_metadata_map).merge((options[:metadata_map] || { }).merge(map))
+        self.class.build_metadata_document(metadata_in, map, options)
       end
 
       # @return [Array]
@@ -753,11 +758,10 @@ module Vidispine
           end
 
           last_response = job_monitor_response[:last_response]
-          if last_response['status'] == 'FINISHED'
-            data = last_response['data']
-            data = Hash[ data.map { |d| [ d['key'], d['value'] ] } ]
-
-          end
+          # if last_response['status'] == 'FINISHED'
+          #   data = last_response['data']
+          #   data = Hash[ data.map { |d| [ d['key'], d['value'] ] } ]
+          # end
 
           # if wait_for_transcode_job
         end
@@ -861,8 +865,9 @@ module Vidispine
           item_transcode_response = item_transcode(:item_id => item_id, :tag => transcode_tag)
           _response[:item_transcode] = item_transcode_response
 
+          job_id = item_transcode_response['jobId']
+          _response[:job_id] = job_id
           if options[:wait_for_transcode_job]
-            job_id = item_transcode_response['jobId']
             job_monitor_callback = options[:job_monitor_callback_function]
             job_monitor_response = wait_for_job_completion(:job_id => job_id) do |env|
               logger.debug { "Waiting for '#{transcode_tag}' Transcode Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
@@ -1288,7 +1293,6 @@ module Vidispine
         return_extended_response = args.fetch(:extended_response, true)
         volume_path = args[:volume_path]
 
-
         # The method type of the URI to lookup
         storage_method_type = (args[:storage_method_type] ||= 'file').to_s.downcase
         logger.debug { "Storage Method Type: '#{storage_method_type}'" }
@@ -1308,7 +1312,6 @@ module Vidispine
 
         ## Storage Determined Now Start Digging for the File
 
-
         case storage_method_type
           when 'file', 'http', 's3'
             storage_uri_method = "#{storage_method_type}:"
@@ -1323,12 +1326,14 @@ module Vidispine
             else
               volume_path = storage_uri.path
             end
-          when 'vxa'
 
+          when 'vxa'
             vxa_local_path = storage['metadata']['field'].find { |m| m['key'] == 'vxaLocalPath' }['value']
             volume_path = vxa_local_path
+
           else
             volume_path = sm_volume_path
+
         end unless volume_path
         logger.debug { "Volume Path: '#{volume_path}'" }
 
