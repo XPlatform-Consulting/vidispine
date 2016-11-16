@@ -38,6 +38,62 @@ module Vidispine
         response
       end
 
+      # Tries to determine if the last request got a successful response
+      def success?
+        return unless @request
+        if @request.respond_to?(:success?)
+          @request.success?
+        else
+          _response = http_client.response
+          _response && _response.code == @request.class::HTTP_SUCCESS_CODE
+        end
+      end
+
+      # def success?
+      #   request && (request.respond_to?(:success?) ? request.success? : (response && response.code.start_with?('2')))
+      # end
+
+      # Will try to return the most concise error message possible
+      #
+      # Example:
+      # {
+      #   "invalidInput": {
+      #       "id": "portal_mf734147",
+      #       "context": "metadata-field",
+      #       "value": null,
+      #   "explanation": "The metadata value is invalid"
+      #   },
+      #   "conflict": null,
+      #   "notAuthorized": null,
+      #   "fileAlreadyExists": null,
+      #   "licenseFault": null,
+      #   "notFound": null,
+      #   "internalServer": null,
+      #   "forbidden": null,
+      #   "notYetImplemented": null
+      # }
+      #
+      # will become
+      #
+      # {
+      #   "invalidInput"=> {
+      #     "id"=>"portal_mf734147",
+      #     "context"=>"metadata-field",
+      #     "value"=>nil,
+      #     "explanation"=>"The metadata value is invalid"
+      #   }
+      # }
+      def error
+        _response_parsed = http_client.response_parsed
+        if _response_parsed.is_a?(Hash)
+          _error = _response_parsed.delete_if { |k,v| v.nil? }
+          _error
+        else
+          _response = http_client.response
+          _response.body if _response.respond_to?(:body)
+        end
+      end
+
       # ############################################################################################################## #
       # @!group API Endpoints
 
