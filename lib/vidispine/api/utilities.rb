@@ -1,4 +1,5 @@
 require 'vidispine/api/client'
+require 'rexml/document'
 
 module Vidispine
 
@@ -384,6 +385,67 @@ module Vidispine
         docs
       end
 
+      # @return [Hash]
+      def cantemo_metadata_field_group_map(field_group, options = { })
+        field_group = metadata_field_group_get(:group_name => field_group, :include_values => true, :traverse => true) if field_group.is_a?(String)
+
+        field_map = { }
+        group_name = field_group['schema']['name']
+        fields = field_group['field']
+        fields.each do |field|
+          cp_field = cantemo_metadata_field_process(field)
+          cp_field[:group] = group_name
+          cp_field[:vs_def] = field
+
+          field_map[cp_field[:label]] = cp_field
+        end
+
+        field_map
+      end
+
+      # @return [Hash]
+      def cantemo_metadata_field_process(field, options = { })
+        field_name = field['name']
+        field_data = field['data']
+        field_data = JSON.parse(field['data']) if field_data.is_a?(String) && field_data.start_with?('{')
+
+        field_extra_data = field_data.find { |fd| fd['key'] == 'extradata' } || { }
+        field_extra_data_value = field_extra_data['value']
+        field_extra_data_value = JSON.parse(field_extra_data_value) if field_extra_data_value.is_a?(String) && field_extra_data_value.start_with?('{')
+        return nil unless field_extra_data_value.is_a?(Hash)
+
+        field_label = field_extra_data_value['name']
+
+        cp_field_type = field_extra_data_value['type']
+        cp_field = {
+            :name => field_name,
+            :type => cp_field_type,
+            :label => field_label,
+            :cp_def => field_extra_data_value
+        }
+
+        case cp_field_type
+          when 'checkbox', 'dropdown'
+            _values = field_extra_data_value['values']
+            choices = Hash[ _values.map { |v| [ v['key'], v['value'] ] } ]
+            cp_field[:choices] = choices
+          when 'lookup'
+            field_data__values = (field_data.find { |fd| fd['key'] == '__values' } || { })['value']
+            if field_data__values
+              __values_xml = field_data__values.gsub('\"', '"')
+              __values_doc = REXML::Document.new(StringIO.new(__values_xml))
+
+              choices = { }
+              __values_doc.elements.each('SimpleMetadataDocument/field') do |e|
+                choices[e.elements['key'].text] = e.elements['value'].text
+              end
+              cp_field[:choices] = choices
+            end
+        end
+
+        cp_field
+      end
+
       # Searches for a collection by name and if a match is not found then a new collection is created
       # This method will only return the first match if an existing collection is found.
       #
@@ -428,7 +490,18 @@ module Vidispine
           raise ArgumentError, 'collection_name is required.'
         end
 
-        collections = ( (collections_get || { })['collection'] || [ ] )
+        # collections = ( (collections_get || { })['collection'] || [ ] )
+
+        first = 1
+        limit = 1000
+        collections = [ ]
+        loop do
+          r = collections_get(:first => first, :number => limit)
+          _collections = r['collection']
+          break if _collections.empty?
+          collections.concat _collections
+          first += _collections.length
+        end
 
         comparison_method, comparison_value = options.fetch(:case_sensitive, true) ? [ :eql?, true ] : [ :casecmp, 0 ]
         collections_search_method = return_first_match ? :find : :select
@@ -1416,9 +1489,16 @@ module Vidispine
           storage_methods = storage['method']
           file_storage_method = storage_methods.find { |m| m['uri'].start_with?("#{method}:") }
           next unless file_storage_method
-          uri = file_storage_method['uri']
-          match = uri.match(/(.*):\/\/(.*)/)
-          address = match[2]
+          case method
+            when 'vxa'
+              md = Hash[ storage['metadata']['field'].map { |m| [ m['key'], m['value'] ] } ]
+              address = md['vxaLocalPath']
+              address.concat('/') if address && !(address.empty? || address.end_with?('/'))
+            else
+              uri = file_storage_method['uri']
+              match = uri.match(/(.*):\/\/(.*)/)
+              address = match[2]
+          end
           storage_file_path_map[address] = storage['id']
         end
         storage_file_path_map
