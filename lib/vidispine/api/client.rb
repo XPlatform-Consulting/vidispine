@@ -45,7 +45,7 @@ module Vidispine
           @request.success?
         else
           _response = http_client.response
-          _response && _response.code == @request.class::HTTP_SUCCESS_CODE
+          _response && _response.code.start_with?('2')
         end
       end
 
@@ -238,7 +238,18 @@ module Vidispine
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#retrieve-a-list-of-all-collections
       def collections_get(args = { }, options = { })
-        http(:get, 'collection')
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_method => :get,
+            :http_path => 'collection',
+            :parameters => [
+              { :name => :first, :send_in => :matrix },
+              { :name => :number, :send_in => :matrix },
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
       end
       alias :collections :collections_get
 
@@ -664,6 +675,23 @@ module Vidispine
             :http_path => 'metadata/#{arguments[:field_name]}',
             :parameters => [
               { :name => :field_name, :aliases => [ :name ], :send_in => :path }
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
+      # @see http://apidoc.vidispine.com/latest/ref/metadata/field-group.html#retrieving-the-fields-of-a-group
+      def metadata_field_group_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'metadata-field/field-group/#{path_arguments[:group_name]}',
+            :parameters => [
+              { :name => :group_name, :aliases => [ :name ], :send_in => :path },
+              :include_values,
+              :traverse,
+              :data
             ]
           }.merge(options)
         )
