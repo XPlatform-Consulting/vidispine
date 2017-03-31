@@ -114,8 +114,10 @@ module Vidispine
           @request = request
           logger.debug { %(REQUEST: #{request.method} http#{http.use_ssl? ? 's' : ''}://#{http.address}:#{http.port}#{request.path} HEADERS: #{request.to_hash.inspect} #{log_request_body and request.request_body_permitted? ? "\n-- BODY BEGIN --\n#{format_body_for_log_output(request)}\n-- BODY END --" : ''}) }
 
+          @request_time_start = Time.now
           @response = http.request(request)
-          logger.debug { %(RESPONSE: #{response.inspect} HEADERS: #{response.to_hash.inspect} #{log_response_body and response.respond_to?(:body) ? "\n-- BODY BEGIN --\n#{format_body_for_log_output(response)}\n-- BODY END--" : ''}) }
+          @request_time_end = Time.now
+          logger.debug { %(RESPONSE: #{response.inspect} HEADERS: #{response.to_hash.inspect} #{log_response_body and response.respond_to?(:body) ? "\n-- BODY BEGIN --\n#{format_body_for_log_output(response)}\n-- BODY END--" : ''}\nTook: #{@request_time_end - @request_time_start} seconds) }
           #logger.debug { "Parse Response? #{@parse_response}" }
 
           raise HTTPAuthorizationError if @use_exceptions && @response.code == '401'
