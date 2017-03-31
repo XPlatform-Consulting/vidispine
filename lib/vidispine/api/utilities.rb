@@ -517,7 +517,8 @@ module Vidispine
       # @option args [Hash] :metadata ({})
       # @option args [Hash] :metadata_map ({})
       # @option args [Hash] :file
-      # @option args [Boolean] :create_thumbnails (false)
+      # @option args [String] :file_id
+      # @option args [Boolean] :create_thumbnails (true)
       # @option args [Integer|false] :create_posters (3)
       #
       # @param [Hash] options
@@ -535,11 +536,19 @@ module Vidispine
         raise ArgumentError, ':file_path is a required argument.' unless file_path
 
         # 2. Determine Storage ID
+        storage_method = args[:storage_method] || 'file'
         storage_path_map = args[:storage_path_map]
-        storage_path_map = storage_file_path_map_create unless storage_path_map and !storage_path_map.empty?
+        storage_path_map = storage_file_path_map_create(:storage_method => storage_method) unless storage_path_map and !storage_path_map.empty?
 
-        volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path) }
-        raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
+        storage_id = args[:storage_id]
+        if storage_id
+          volume_path, storage = storage_path_map.find { |_, id| id == storage_id }
+          raise "Unable to find match in storage path map for '#{storage_id}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
+        else
+          volume_path, storage = storage_path_map.find { |path, _| file_path.start_with?(path) }
+          raise "Unable to find match in storage path map for '#{file_path}'. Storage Map: #{storage_path_map.inspect}" unless volume_path
+        end
+
 
         file_path_relative_to_storage_path = file_path.sub(volume_path, '')
         logger.debug { "File Path Relative to Storage Path: #{file_path_relative_to_storage_path}" }
@@ -549,15 +558,18 @@ module Vidispine
         storage_id = storage['id']
         raise "Error Retrieving Storage Record. Storage: #{storage.inspect}" unless storage_id
 
+        # The URI Lookup part was commented out as it should be handled by the storage_file_path_map_create
         # The method type of the URI to lookup
-        storage_method_type = args[:storage_method_type] ||= 'file'
+        # storage_method_type = args[:storage_method_type] ||= 'file'
+        #
+        # storage_uri_method = "#{storage_method_type}:"
+        # storage_uri_raw = (storage['method'].find { |v| v['uri'].start_with?(storage_uri_method) } || { })['uri'] rescue nil
+        # raise "Error Getting URI from Storage Method. Storage: #{storage.inspect}" unless storage_uri_raw
+        # storage_uri = URI.parse(storage_uri_raw)
+        #
+        # vidispine_file_path = File.join(storage_uri.path, file_path_relative_to_storage_path)
 
-        storage_uri_method = "#{storage_method_type}:"
-        storage_uri_raw = (storage['method'].find { |v| v['uri'].start_with?(storage_uri_method) } || { })['uri'] rescue nil
-        raise "Error Getting URI from Storage Method. Storage: #{storage.inspect}" unless storage_uri_raw
-        storage_uri = URI.parse(storage_uri_raw)
-
-        vidispine_file_path = File.join(storage_uri.path, file_path_relative_to_storage_path)
+        vidispine_file_path = File.join(volume_path, file_path_relative_to_storage_path)
         logger.debug { "Vidispine File Path: '#{vidispine_file_path}'" }
         _response[:vidispine_file_path] = vidispine_file_path
 
@@ -570,21 +582,26 @@ module Vidispine
         metadata_documents = build_metadata_documents(_metadata, _metadata_map, options)
         metadata_document = metadata_documents.shift || { }
 
-
         # Allow the file to be passed in
         file = args[:file]
+        unless file
+          file_id = args[:file_id]
+          file = { 'id' => file_id }
+        end
+
         if file and !file['item']
           # If the passed file doesn't have an item then requery to verify that the item is absent
-          storage_file_get_response = storage_file_get(:storage_id => storage_id, :file_id => file['id'], :include_item => true)
+          storage_file_get_response = storage_file_get(:storage_id => storage_id, :file_id => file_id, :include_item => true)
+
           raise "Error Getting Storage File. '#{storage_file_get_response.inspect}'" unless storage_file_get_response and storage_file_get_response['id']
           _response[:storage_file_get_response] = storage_file_get_response
 
           file = storage_file_get_response
         else
-          storage_file_get_or_create_response = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, :extended_response => true)
-          _response[:storage_file_get_or_create_response] = storage_file_get_or_create_response
-          file = storage_file_get_or_create_response[:file]
-          file_found = storage_file_get_or_create_response[:file_already_existed]
+            storage_file_get_or_create_response = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, :extended_response => true)
+            _response[:storage_file_get_or_create_response] = storage_file_get_or_create_response
+            file = storage_file_get_or_create_response[:file]
+            file_found = storage_file_get_or_create_response[:file_already_existed]
         end
 
         if file
