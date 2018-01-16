@@ -1511,6 +1511,12 @@ module Vidispine
               md = Hash[ storage['metadata']['field'].map { |m| [ m['key'], m['value'] ] } ]
               address = md['vxaLocalPath']
               address.concat('/') if address && !(address.empty? || address.end_with?('/'))
+            when 's3'
+              # "s3://{access_key}:_VSENC__{encrypted_secret_access_key}@{bucket_name}/?region=us-east-1?sseAlgorithm=aws:kms?signer=AWSS3V4SignerType/"
+              uri = file_storage_method['uri']
+              user_info, bucket_info = uri.split('@')
+              address, args = bucket_info.split('?').first
+              address.chomp!('/') if address.end_with?('/')
             else
               uri = file_storage_method['uri']
               match = uri.match(/(.*):\/\/(.*)/)
