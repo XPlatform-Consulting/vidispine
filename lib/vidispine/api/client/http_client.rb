@@ -25,7 +25,7 @@ module Vidispine
 
         DEFAULT_USERNAME = 'admin'
         DEFAULT_PASSWORD = 'password'
-        DEFAULT_BASE_PATH = '/API/'
+        DEFAULT_BASE_PATH = 'API/'
 
         DEFAULT_HEADER_CONTENT_TYPE = 'application/json; charset=utf-8'
         DEFAULT_HEADER_ACCEPTS = 'application/json'
@@ -199,7 +199,7 @@ module Vidispine
 
         def delete(path, options = { })
           query = options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
+          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
           request = Net::HTTP::Delete.new(@uri.request_uri, default_request_headers)
           send_request(request)
@@ -212,7 +212,7 @@ module Vidispine
           _headers = _default_request_headers.merge(headers)
 
           query ||= options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
+          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
           request = Net::HTTP::Get.new(@uri.request_uri, _headers)
           send_request(request)
@@ -225,7 +225,7 @@ module Vidispine
           _headers = _default_request_headers.merge(headers)
 
           query ||= options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
+          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
 
           request = Net::HTTP::Head.new(@uri.request_uri, _headers)
@@ -239,7 +239,7 @@ module Vidispine
           _headers = _default_request_headers.merge(headers)
 
           query ||= options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
+          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
           request = Net::HTTP::Options.new(@uri.request_uri, _headers)
           send_request(request)
@@ -252,7 +252,7 @@ module Vidispine
           _headers = _default_request_headers.merge(headers)
 
           query = options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
+          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
           request = Net::HTTP::Put.new(@uri.request_uri, _headers)
 
@@ -269,7 +269,7 @@ module Vidispine
           _headers = _default_request_headers.merge(headers)
 
           query = options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?('/API') ? '' : @default_base_path )
+          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
           @uri = build_uri(File.join(base_path, path), query)
 
           request = Net::HTTP::Post.new(@uri.request_uri, _headers)
