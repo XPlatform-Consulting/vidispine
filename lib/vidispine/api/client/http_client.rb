@@ -1,5 +1,5 @@
 require 'json'
-require 'net/http'
+require 'net/https'
 
 module Vidispine
   module API
@@ -87,6 +87,8 @@ module Vidispine
           use_ssl = args[:http_host_use_ssl]
           if use_ssl
             # @TODO Add SSL Support
+            http.use_ssl = true
+            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
           end
 
           http
