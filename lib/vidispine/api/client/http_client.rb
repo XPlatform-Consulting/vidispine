@@ -9,7 +9,8 @@ module Vidispine
 
         class HTTPAuthorizationError < RuntimeError; end
 
-        attr_accessor :logger, :http, :http_host_address, :http_host_port, :base_uri
+        attr_accessor :logger, :http, :http_host_address, :http_host_port, :base_uri, :default_base_path,
+                      :default_query_data
         attr_accessor :username, :password
 
         attr_accessor :default_request_headers,
@@ -44,6 +45,8 @@ module Vidispine
 
           @base_uri = args[:base_uri] || "http#{http.use_ssl? ? 's' : ''}://#{http.address}:#{http.port}"
           @default_base_path = args[:default_base_path] || DEFAULT_BASE_PATH
+
+          @default_query_data = args[:default_query_data] || { }
 
           # @user_agent_default = "#{@hostname}:#{@username} Ruby SDK Version #{Vidispine::VERSION}"
 
@@ -143,7 +146,7 @@ module Vidispine
         # @param [Hash|String|Nil] query
         # @return [URI]
         def build_uri(path = '', query = nil)
-          _query = query.is_a?(Hash) ? query.map { |k,v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v)}" }.join('&') : query
+          _query = query.is_a?(Hash) ? default_query_data.merge(query.map { |k,v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v)}" }.join('&')) : query
           _path = "#{path}#{_query and _query.respond_to?(:empty?) and !_query.empty? ? "?#{_query}" : ''}"
           URI.parse(File.join(base_uri, _path))
         end
