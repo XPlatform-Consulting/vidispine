@@ -9,6 +9,8 @@ module Vidispine::API::Client::Requests
 
     PARAMETERS = [
         { :name => :result, :send_in => :query },
+        { :name => :content, :send_in => :query },
+
 
         :library,
         :first,
