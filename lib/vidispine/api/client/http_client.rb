@@ -42,6 +42,7 @@ module Vidispine
 
           @username = args[:username] || DEFAULT_USERNAME
           @password = args[:password] || DEFAULT_PASSWORD
+          @authorization_header_value = args[:authorization_header_value]
 
           @base_uri = args[:base_uri] || "http#{http.use_ssl? ? 's' : ''}://#{http.address}:#{http.port}"
           @default_base_path = args[:default_base_path] || DEFAULT_BASE_PATH
