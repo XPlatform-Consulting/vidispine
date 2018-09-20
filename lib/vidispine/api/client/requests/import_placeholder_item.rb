@@ -13,6 +13,8 @@ module Vidispine::API::Client::Requests
       :fileId,
       :tag,
       :original,
+      :createPosters,
+      :createThumbnails,
       :overrideFastStart,
       :requireFastStart,
       :fastStartLength,
