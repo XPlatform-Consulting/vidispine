@@ -83,12 +83,11 @@ module Vidispine
           @http_host_address = args[:http_host_address] ||= DEFAULT_HTTP_HOST_ADDRESS
           @http_host_port = args[:http_host_port] ||= DEFAULT_HTTP_HOST_PORT
           @http = Net::HTTP.new(http_host_address, http_host_port)
-
           use_ssl = args[:http_host_use_ssl]
           if use_ssl
-            # @TODO Add SSL Support
+            http_verify_mode = args.fetch(:http_verify_mode, OpenSSL::SSL::VERIFY_NONE)
             http.use_ssl = true
-            http.verify_mode = OpenSSL::SSL::VERIFY_NONE
+            http.verify_mode = http_verify_mode if http_verify_mode
           end
 
           http
