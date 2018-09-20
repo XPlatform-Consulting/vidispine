@@ -405,6 +405,27 @@ module Vidispine
         process_request(_request, options)
       end
 
+      # Create a placeholder shape
+      # @see http://apidoc.vidispine.com/latest/ref/item/shape.html#create-a-placeholder-shape
+      def item_shape_placholder_create(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+            args,
+            {
+                :http_path => '/item/#{path_arguments[:item_id]}/shape/placeholder',
+                :default_parameter_send_in_value => :query,
+                :parameters => [
+                    { :name => :item_id, :required => true, :type => :path },
+                    { :name => :tag },
+                    { :name => :container },
+                    { :name => :audio },
+                    { :name => :video },
+                    { :name => :frameDuration },
+                ]
+            }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
       # @see http://apidoc.vidispine.com/4.2.6/ref/item/shape.html#get-list-of-shapes
       def item_shapes_get(args = { }, options = { })
         _request = Requests::BaseRequest.new(
@@ -423,6 +444,7 @@ module Vidispine
         )
         process_request(_request, options)
       end
+
 
       # @see http://apidoc.vidispine.com/4.2/ref/item/shape.html#import-a-shape-using-a-uri-or-an-existing-file
       def item_shape_import(args = { }, options = { })
