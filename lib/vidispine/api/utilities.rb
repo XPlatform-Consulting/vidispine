@@ -1505,8 +1505,11 @@ module Vidispine
       def storage_file_path_map_create(args = {})
         method = args[:storage_method] || 'file'
 
-        storages_response = storages_get
-        storages = storages_response['storage']
+        storages = args[:storages] || begin
+          storages_response = args[:storages_response] || storages_get
+          storages_response['storage']
+        end
+
         storage_file_path_map = { }
         storages.each do |storage|
           storage_methods = storage['method']
