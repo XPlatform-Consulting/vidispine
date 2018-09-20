@@ -1409,11 +1409,12 @@ module Vidispine
               ((v['lastSuccess'] || '') >= (v['lastFailure'] || '')) && (storage_method_type == 'any' || v['uri'].start_with?(storage_uri_method))
             end || { })['uri'] rescue nil
             raise "Error Getting URI from Storage Method. Storage: #{storage.inspect}" unless storage_uri_raw
-            storage_uri = URI.parse(storage_uri_raw)
 
             if storage_method_type == 's3'
-              volume_path = "#{storage_uri.host}/"
+              # URI was returning URI::InvalidURIError: the scheme s3 does not accept registry part
+              volume_path = storage_uri_raw.split('@').last.sub('s3://', '').split('?').first
             else
+              storage_uri = URI.parse(storage_uri_raw)
               volume_path = storage_uri.path
             end
 
