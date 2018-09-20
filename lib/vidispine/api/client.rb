@@ -960,6 +960,10 @@ module Vidispine
       end
       alias :storages :storages_get
 
+      def version(args = { }, options = { })
+        http(:get, 'API/version')
+      end
+
       # @!endgroup API Endpoints
       # ############################################################################################################## #
 
