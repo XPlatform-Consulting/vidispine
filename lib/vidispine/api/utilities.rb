@@ -385,6 +385,7 @@ module Vidispine
         docs
       end
 
+      # @param [String|Hash] field_group
       # @return [Hash]
       def cantemo_metadata_field_group_map(field_group, options = { })
         field_group = metadata_field_group_get(:group_name => field_group, :include_values => true, :traverse => true) if field_group.is_a?(String)
@@ -403,6 +404,8 @@ module Vidispine
         field_map
       end
 
+      # @param [Hash] field
+      # @param [Hash] options
       # @return [Hash]
       def cantemo_metadata_field_process(field, options = { })
         field_name = field['name']
@@ -1495,6 +1498,8 @@ module Vidispine
       #
       # @param [Hash] args
       # @option args [String] :storage_method ('file')
+      # @option args [Hash] :storages_response (#storages_get)
+      # @option args [Array] :storages
       #
       # @return [Hash]
       def storage_file_path_map_create(args = {})
