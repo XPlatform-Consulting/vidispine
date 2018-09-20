@@ -592,7 +592,7 @@ module Vidispine
           file = { 'id' => file_id }
         end
 
-        if file and !file['item']
+        if file_id && file && !file['item']
           # If the passed file doesn't have an item then requery to verify that the item is absent
           storage_file_get_response = storage_file_get(:storage_id => storage_id, :file_id => file_id, :include_item => true)
 
