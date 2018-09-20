@@ -11,7 +11,7 @@ module Vidispine
           HTTP_METHOD = :get
           HTTP_BASE_PATH = '/API/'
           HTTP_PATH = ''
-          HTTP_SUCCESS_CODE = 200
+          HTTP_SUCCESS_CODE = '200'
 
           DEFAULT_PARAMETER_SEND_IN_VALUE = :query
 
@@ -107,6 +107,7 @@ module Vidispine
             @parameters = options[:parameters]
             @http_method = options[:http_method]
             @http_path = options[:http_path] ||= options[:path_raw]
+            @http_success_code = options[:http_success_code] ||= HTTP_SUCCESS_CODE
 
             @path = options[:path]
             @path_arguments = nil
@@ -140,6 +141,10 @@ module Vidispine
 
           # @!group Attribute Readers
 
+          def http_success_code
+            @http_success_code
+          end
+
           def arguments
             @arguments ||= { }
           end
@@ -165,7 +170,7 @@ module Vidispine
           end
 
           def http_path
-            @http_path ||= self.class::HTTP_PATH
+            @http_path ||= self.class::HTTP_PATH #||= File.join(http.default_base_path, self.class::HTTP_PATH)
           end
 
           def http_method
@@ -217,7 +222,7 @@ module Vidispine
 
           def success?
             _response = client.http_client.response
-            _response && _response.code == HTTP_SUCCESS_CODE
+            _response && (_response.code == http_success_code)
           end
 
           # @!endgroup
