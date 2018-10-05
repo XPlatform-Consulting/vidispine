@@ -9,7 +9,7 @@ module Vidispine
         class BaseRequest
 
           HTTP_METHOD = :get
-          HTTP_BASE_PATH = '/API/'
+          HTTP_BASE_PATH = '/API/' # Not used, using client.api_endpoint_prefix instead
           HTTP_PATH = ''
           HTTP_SUCCESS_CODE = '200'
 
@@ -102,7 +102,7 @@ module Vidispine
             @processed_parameters = { }
             @arguments = { }
             @eval_http_path = options.fetch(:eval_http_path, true)
-            @base_path = options[:base_path]
+            @base_path = options[:base_path] || client.default_base_path
 
             @parameters = options[:parameters]
             @http_method = options[:http_method]
@@ -150,7 +150,7 @@ module Vidispine
           end
 
           def base_path
-            @base_path ||= self.class::HTTP_BASE_PATH
+            @base_path ||= client.api_endpoint_prefix # self.class::HTTP_BASE_PATH
           end
 
           def body_arguments

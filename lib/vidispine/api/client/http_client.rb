@@ -25,7 +25,7 @@ module Vidispine
 
         DEFAULT_USERNAME = 'admin'
         DEFAULT_PASSWORD = 'password'
-        DEFAULT_BASE_PATH = 'API/'
+        DEFAULT_BASE_PATH = '/'
 
         DEFAULT_HEADER_CONTENT_TYPE = 'application/json; charset=utf-8'
         DEFAULT_HEADER_ACCEPTS = 'application/json'
@@ -40,12 +40,8 @@ module Vidispine
 
           logger.debug { "#{self.class.name}::#{__method__} Arguments: #{args.inspect}" }
 
-          @username = args[:username] || DEFAULT_USERNAME
-          @password = args[:password] || DEFAULT_PASSWORD
-          @authorization_header_value = args[:authorization_header_value]
-
           @base_uri = args[:base_uri] || "http#{http.use_ssl? ? 's' : ''}://#{http.address}:#{http.port}"
-          @default_base_path = args[:default_base_path] || DEFAULT_BASE_PATH
+          @default_base_path = args.fetch(:default_base_path, DEFAULT_BASE_PATH)
 
           @default_query_data = args[:default_query_data] || { }
 
@@ -150,13 +146,26 @@ module Vidispine
           end
         end
 
+        # Compiles a full URI
+        #
         # @param [String] path
         # @param [Hash|String|Nil] query
+        # @param [Hash] options
+        # @option options [Hash] :default_query_data
+        # @option options [Hash] :default_base_path
+        #
         # @return [URI]
-        def build_uri(path = '', query = nil)
-          _query = query.is_a?(Hash) ? default_query_data.merge(query.map { |k,v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v)}" }.join('&')) : query
+        def build_uri(path = '', query = nil, options = { })
+          _default_query_data = options.fetch(:default_query_data, default_query_data) || { }
+          _default_base_path = options.fetch(:default_base_path, default_base_path)
+
+          query = { } if query.nil?
+
+          _query = query.is_a?(Hash) ? (default_query_data.merge(query)).map { |k,v| "#{CGI.escape(k.to_s)}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v)}" }.join('&') : query
           _path = "#{path}#{_query and _query.respond_to?(:empty?) and !_query.empty? ? "?#{_query}" : ''}"
-          URI.parse(File.join(base_uri, _path))
+          _path = File.join(_default_base_path, _path) if _default_base_path
+          _path = File.join(base_uri, _path)
+          URI.parse(_path)
         end
 
         if RUBY_VERSION.start_with? '1.8.'
@@ -169,16 +178,17 @@ module Vidispine
           end
         end
 
+        # Builds the HTTP request
+        #
         # @param [Symbol] method_name (:get)
         # @param [Hash] args
         # @option args [Hash] :headers ({})
         # @option args [String] :path ('')
         # @option args [Hash] :query ({})
         # @option args [Any] :body (nil)
-        #
         # @param [Hash] options
         # @option options [Hash] :default_request_headers (@default_request_headers)
-        def call_method(method_name = :get, args = { }, options = { })
+        def build_request(method_name = :get, args = { }, options = { })
           headers = args[:headers] || options[:headers] || { }
           path = args[:path] || ''
           query = args[:query] || { }
@@ -189,102 +199,59 @@ module Vidispine
           _default_request_headers ||= { }
           _headers = _default_request_headers.merge(headers)
 
-          @uri = build_uri(path, query)
+          @uri = build_uri(path, query, options)
           klass_name = request_method_name_to_class_name(method_name)
           klass = Net::HTTP.const_get(klass_name)
 
-          request = klass.new(@uri.request_uri, _headers)
+          _request = klass.new(@uri.request_uri, _headers)
 
-          if request.request_body_permitted?
+          if _request.request_body_permitted?
             _body = (body and !body.is_a?(String)) ? JSON.generate(body) : body
             logger.debug { "Processing Body: '#{_body}'" }
-            request.body = _body if _body
+            _request.body = _body if _body
           end
 
-          send_request(request)
+          _request
+        end
+
+        # First builds and then sends the HTTP request
+        #
+        # @param [Symbol] method_name (:get)
+        # @param [Hash] args
+        # @option args [Hash] :headers ({})
+        # @option args [String] :path ('')
+        # @option args [Hash] :query ({})
+        # @option args [Any] :body (nil)
+        #
+        # @param [Hash] options
+        # @option options [Hash] :default_request_headers (@default_request_headers)
+        def build_and_send_request(method_name = :get, args = { }, options = { })
+          _request = build_request(method_name, args, options)
+          send_request(_request)
         end
 
         def delete(path, options = { })
-          query = options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
-          @uri = build_uri(File.join(base_path, path), query)
-          request = Net::HTTP::Delete.new(@uri.request_uri, default_request_headers)
-          send_request(request)
+          build_and_send_request(:delete, { :path => path }, options)
         end
 
         def get(path, options = { })
-          # Allow the default request headers to be overridden
-          headers = options[:headers] || { }
-          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
-          _headers = _default_request_headers.merge(headers)
-
-          query ||= options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
-          @uri = build_uri(File.join(base_path, path), query)
-          request = Net::HTTP::Get.new(@uri.request_uri, _headers)
-          send_request(request)
+          build_and_send_request(:get, { :path => path }, options)
         end
 
         def head(path, options = { })
-          # Allow the default request headers to be overridden
-          headers = options[:headers] || { }
-          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
-          _headers = _default_request_headers.merge(headers)
-
-          query ||= options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
-          @uri = build_uri(File.join(base_path, path), query)
-
-          request = Net::HTTP::Head.new(@uri.request_uri, _headers)
-          send_request(request)
+          build_and_send_request(:head, { :path => path }, options)
         end
 
         def options(path, options = { })
-          # Allow the default request headers to be overridden
-          headers = options[:headers] || { }
-          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
-          _headers = _default_request_headers.merge(headers)
-
-          query ||= options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
-          @uri = build_uri(File.join(base_path, path), query)
-          request = Net::HTTP::Options.new(@uri.request_uri, _headers)
-          send_request(request)
+          build_and_send_request(:options, { :path => path }, options)
         end
 
         def put(path, body, options = { })
-          # Allow the default request headers to be overridden
-          headers = options[:headers] || { }
-          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
-          _headers = _default_request_headers.merge(headers)
-
-          query = options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
-          @uri = build_uri(File.join(base_path, path), query)
-          request = Net::HTTP::Put.new(@uri.request_uri, _headers)
-
-          body = JSON.generate(body) if body and !body.is_a?(String)
-
-          request.body = body if body
-          send_request(request)
+          build_and_send_request(:put, { :path => path, :body => body }, options)
         end
 
         def post(path, body, options = { })
-          # Allow the default request headers to be overridden
-          headers = options[:headers] || { }
-          _default_request_headers = options.fetch(:default_request_headers, default_request_headers) || { }
-          _headers = _default_request_headers.merge(headers)
-
-          query = options.fetch(:query, { })
-          base_path = options[:base_path] || ( path.start_with?(@default_base_path) ? '' : @default_base_path )
-          @uri = build_uri(File.join(base_path, path), query)
-
-          request = Net::HTTP::Post.new(@uri.request_uri, _headers)
-
-          body = JSON.generate(body) if body and !body.is_a?(String)
-
-          request.body = body if body
-          send_request(request)
+          build_and_send_request(:post, { :path => path, :body => body }, options)
         end
 
         # HTTPClient

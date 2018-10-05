@@ -9,7 +9,16 @@ module Vidispine
 
       attr_accessor :http_client, :request, :response, :logger
 
+      attr_accessor :api_endpoint_prefix, :api_noauth_endpoint_prefix
+
       def initialize(args = { })
+
+        # API Path
+        @api_endpoint_prefix = args.fetch(:api_endpoint_prefix, 'API')
+
+        # APInoAuth Path
+        @api_noauth_endpoint_prefix = args.fetch(:api_noauth_endpoint_prefix, 'APInoauth')
+
         @http_client = HTTPClient.new(args)
         @logger = http_client.logger
       end
@@ -20,7 +29,7 @@ module Vidispine
         request.client = self unless request.client
         options ||= request.options
         logger.warn { "Request is Missing Required Arguments: #{request.missing_required_arguments.inspect}" } unless request.missing_required_arguments.empty?
-        @response = http_client.call_method(request.http_method, { :path => request.path, :query => request.query, :body => request.body }, options)
+        @response = http_client.build_and_send_request(request.http_method, { :path => request.path, :query => request.query, :body => request.body }, options)
       end
 
       def process_request_using_class(request_class, args, options = { })
@@ -137,7 +146,8 @@ module Vidispine
           _args = _data[:arguments_out]
           _args[:collection_id]
         end
-        http(:delete, "/collection/#{collection_id}")
+        path = File.join(api_endpoint_prefix, "/collection/#{collection_id}")
+        http(:delete, path)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#retrieve-the-contents-of-a-collection
@@ -147,7 +157,8 @@ module Vidispine
           _args = _data[:arguments_out]
           _args[:collection_id]
         end
-        http(:get, "/collection/#{collection_id}")
+        path = File.join(api_endpoint_prefix, "/collection/#{collection_id}")
+        http(:get, path)
       end
       alias :collection :collection_get
 
@@ -158,7 +169,8 @@ module Vidispine
           _args = _data[:arguments_out]
           _args[:collection_id]
         end
-        http(:get, "collection/#{collection_id}/item")
+        path = File.join(api_endpoint_prefix, "collection/#{collection_id}/item")
+        http(:get, path)
       end
       alias :collection_items :collection_items_get
 
@@ -170,7 +182,8 @@ module Vidispine
           _args = _data[:arguments_out]
           _args[:collection_id]
         end
-        http(:get, "/collection/#{collection_id}/metadata")
+        path = File.join(api_endpoint_prefix, "/collection/#{collection_id}/metadata")
+        http(:get, path)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#update-collection-metadata
@@ -317,7 +330,8 @@ module Vidispine
           _args = _data[:arguments_out]
           _args[:item_id]
         end
-        http(:get, "/item/#{item_id}/collections")
+        path = File.join(api_endpoint_prefix, "/item/#{item_id}/collections")
+        http(:get, path)
       end
       alias :item_collections :item_collections_get
 
@@ -504,7 +518,8 @@ module Vidispine
         query[:priority] = priority if priority
         query[:jobmetadata] = job_metadata if job_metadata
 
-        http(:post, "/item/#{item_id}/shape", '', :query => query)
+        path = File.join(api_endpoint_prefix, "/item/#{item_id}/shape")
+        http(:post, path, '', :query => query)
       end
 
       def item_sidecar_import(args = { }, options = { })
@@ -740,12 +755,14 @@ module Vidispine
       def metadata_field_terse_schema(args = { }, options = { })
         default_options = { :headers => { 'accept' => '*/*' } }
         _options = default_options.merge(options)
-        http(:get, 'metadata-field/terse-schema', _options)
+        path = File.join(api_endpoint_prefix, 'metadata-field/terse-schema')
+        http(:get, path, _options)
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/metadata/field.html#get--metadata-field
       def metadata_fields_get(args = { }, options = { })
-        http(:get, 'metadata-field', options)
+        path = File.join(api_endpoint_prefix, 'metadata-field')
+        http(:get, path, options)
       end
       alias :metadata_fields :metadata_fields_get
 
@@ -936,7 +953,8 @@ module Vidispine
           _args = _data[:arguments_out]
           _args[:storage_id]
         end
-        http(:post, "storage/#{storage_id ? "#{storage_id}/" : ''}rescan", '')
+        path = File.join(api_endpoint_prefix, "storage/#{storage_id ? "#{storage_id}/" : ''}rescan")
+        http(:post, path, '')
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/storage/storage.html#retrieve-list-of-storages
@@ -961,7 +979,7 @@ module Vidispine
       alias :storages :storages_get
 
       def version(args = { }, options = { })
-        http(:get, 'API/version')
+        http(:get, File.join(api_endpoint_prefix, 'version'))
       end
 
       # @!endgroup API Endpoints
