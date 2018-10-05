@@ -102,7 +102,7 @@ module Vidispine
             @processed_parameters = { }
             @arguments = { }
             @eval_http_path = options.fetch(:eval_http_path, true)
-            @base_path = options[:base_path] || client.default_base_path
+            @base_path = options[:base_path]
 
             @parameters = options[:parameters]
             @http_method = options[:http_method]
