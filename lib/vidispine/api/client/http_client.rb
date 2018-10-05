@@ -51,8 +51,14 @@ module Vidispine
 
           # @user_agent_default = "#{@hostname}:#{@username} Ruby SDK Version #{Vidispine::VERSION}"
 
-          @authorization_header_key ||= 'Authorization' #CaseSensitiveHeaderKey.new('Authorization')
-          @authorization_header_value ||= %(Basic #{["#{username}:#{password}"].pack('m').delete("\r\n")})
+          @username = args[:username] || DEFAULT_USERNAME
+          @password = args[:password] || DEFAULT_PASSWORD
+
+          @authorization_header_key = args.fetch(:authorization_header_key, 'Authorization')
+          @authorization_header_value = args.fetch(:authorization_header_value,
+                                                   %(Basic #{["#{username}:#{password}"]
+                                                                 .pack('m')
+                                                                 .delete("\r\n")}))
 
           content_type = args[:content_type_header] ||= DEFAULT_HEADER_CONTENT_TYPE
           accepts = args[:accepts_header] ||= args[:accept_header] || DEFAULT_HEADER_ACCEPTS
@@ -169,6 +175,7 @@ module Vidispine
         # @option args [String] :path ('')
         # @option args [Hash] :query ({})
         # @option args [Any] :body (nil)
+        #
         # @param [Hash] options
         # @option options [Hash] :default_request_headers (@default_request_headers)
         def call_method(method_name = :get, args = { }, options = { })
