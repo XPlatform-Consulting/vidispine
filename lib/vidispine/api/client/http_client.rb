@@ -188,10 +188,12 @@ module Vidispine
         # @option args [Any] :body (nil)
         # @param [Hash] options
         # @option options [Hash] :default_request_headers (@default_request_headers)
+        # @option options [Hash] :headers
+        # @option options [Hash] :query
         def build_request(method_name = :get, args = { }, options = { })
           headers = args[:headers] || options[:headers] || { }
           path = args[:path] || ''
-          query = args[:query] || { }
+          query = args[:query] || options[:query] || { }
           body = args[:body]
 
           # Allow the default request headers to be overridden
