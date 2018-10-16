@@ -200,7 +200,7 @@ module Vidispine
 
           def query
             @query ||= begin
-              query_arguments.is_a?(Hash) ? query_arguments.map { |k,v| "#{CGI.escape(k.to_s).gsub('+', '%20')}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v).gsub('+', '%20')}" }.join('&') : query_arguments
+              query_arguments.is_a?(Hash) ? (client.http_client.default_query_data.merge(query_arguments)).map { |k,v| "#{CGI.escape(k.to_s).gsub('+', '%20')}=#{CGI.escape(v.respond_to?(:to_s) ? v.to_s : v).gsub('+', '%20')}" }.join('&') : query_arguments
             end
           end
 
