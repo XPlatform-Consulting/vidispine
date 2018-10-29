@@ -7,12 +7,14 @@ module Vidispine
 
     class Utilities < Client
 
+      DEFAULT_REQUIRE_METADATA_MAP_MATCH = false
+
       attr_accessor :default_metadata_map, :default_storage_map
 
       def initialize(args = { })
         @default_storage_map = args[:storage_map] || { }
         @default_metadata_map = args[:metadata_map] || { }
-
+        @default_require_metadata_map_match = args.fetch(:require_metadata_map_match, DEFAULT_REQUIRE_METADATA_MAP_MATCH)
         super
       end
 
@@ -309,9 +311,11 @@ module Vidispine
       # @return [Hash]
       def self.build_metadata_document(metadata_in, map = { }, options = { })
         # map = (options[:default_metadata_map]).merge((options[:metadata_map] || { }).merge(map))
+        require_map_match = options.fetch(:require_metadata_map_match, DEFAULT_REQUIRE_METADATA_MAP_MATCH)
         groups = { }
         metadata_in.each do |k,v|
           _map = map[k]
+          _map = k if _map.nil? && !require_map_match
           next unless _map
           _map = [ _map ] unless _map.is_a?(Array)
           _map.each do |_map_|
@@ -349,19 +353,20 @@ module Vidispine
 
       def build_metadata_document(metadata_in, map = { }, options = { })
         map = (options[:default_metadata_map] || default_metadata_map).merge((options[:metadata_map] || { }).merge(map))
+        _require_metadata_map_match = options[:require_metadata_map_match]
+        options[:require_metadata_map_match] = @default_require_metadata_map_match if _require_metadata_map_match.nil?
         self.class.build_metadata_document(metadata_in, map, options)
       end
 
-      # @return [Array]
-      def build_metadata_documents(metadata_in, map = { }, options = { })
-        map = (options[:default_metadata_map] || default_metadata_map).merge(map.merge(options[:metadata_map] || { }))
+      def self.build_metadata_documents(metadata_in, map = { }, options = { })
+        require_map_match = options.fetch(:require_metadata_map_match, DEFAULT_REQUIRE_METADATA_MAP_MATCH)
         groups = { }
         metadata_in.each do |k,v|
-          _map = map[k]
+          _map = require_map_match ? map[k] : map.fetch(k, k)
           next unless _map
           _map = [ _map ] unless _map.is_a?(Array)
           _map.each do |_map_|
-            _map_ = { :field => _map_ } if _map_.is_a?(String)
+            _map_ = { :field => _map_ } if _map_.is_a?(String) || _map.is_a?(Symbol)
             #puts "##{_map_[:group].inspect} #{_map_.class.name} #{_map_.inspect}"
             (groups[_map_[:group]] ||= { })[_map_[:field]] = v
           end
@@ -383,6 +388,15 @@ module Vidispine
         end
 
         docs
+      end
+
+
+      # @return [Array]
+      def build_metadata_documents(metadata_in, map = { }, options = { })
+        map = (options[:default_metadata_map] || default_metadata_map).merge(map.merge(options[:metadata_map] || { }))
+        _require_metadata_map_match = options[:require_metadata_map_match]
+        options[:require_metadata_map_match] = @default_require_metadata_map_match if _require_metadata_map_match.nil?
+        self.class.build_metadata_documents(metadata_in, map, options)
       end
 
       # @param [String|Hash] field_group
