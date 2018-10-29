@@ -548,6 +548,8 @@ module Vidispine
         args = symbolize_keys(args, false)
         _response = { }
 
+        original_shape_tag_name = args[:original_shape_tag_name] || 'original'
+
         # 1. Receive a File Path
         file_path = args[:file_path]
         raise ArgumentError, ':file_path is a required argument.' unless file_path
@@ -665,7 +667,8 @@ module Vidispine
         unless shape
           # 6. Add the file as the original shape
           logger.debug { 'Adding the file as the Original Shape.' }
-          item_shape_import_response = item_shape_import(:item_id => item_id, :file_id => file_id, :tag => 'original')
+          item_shape_import_response = import_placeholder_item(:item_id => item_id, :file_id => file_id, :tag => original_shape_tag_name)
+          # item_shape_import_response = item_shape_import(:item_id => item_id, :file_id => file_id, :tag => original_shape_tag_name)
           _response[:item_shape_import] = item_shape_import_response
 
           job_id = item_shape_import_response['jobId']
