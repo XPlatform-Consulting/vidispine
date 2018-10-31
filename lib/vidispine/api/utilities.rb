@@ -537,11 +537,13 @@ module Vidispine
       # @option args [String] :file_id
       # @option args [Boolean] :create_thumbnails (true)
       # @option args [Integer|false] :create_posters (3)
+      # @option args [Hash] :import_args ({})
       #
       # @param [Hash] options
       # @option options [Boolean] :add_item_to_collection
       # @option options [Boolean] :wait_for_transcode_job (false)
       # @option options [Boolean] :skip_transcode_if_shape_with_tag_exists (true)
+      # @option options [Boolean] :use_placeholder_import (true)
       #
       # @return [Hash]
       def item_add_using_file_path(args = { }, options = { })
@@ -668,10 +670,21 @@ module Vidispine
         create_posters = args.fetch(:create_posters, 3)
 
         unless shape
+          import_args_in = args[:import_args]
+
+          import_args = { :item_id => item_id, :file_id => file_id, :tag => original_shape_tag_name }
+          import_args.merge!(symbolize_keys(import_args_in, false)) if import_args_in.is_a?(Hash)
+
+          use_placeholder_import = options.fetch(:use_placeholder_import, true)
+          if use_placeholder_import
+            import_args[:item_type] ||= 'container'
+          end
+
           # 6. Add the file as the original shape
           logger.debug { 'Adding the file as the Original Shape.' }
-          item_shape_import_response = import_placeholder_item(:item_id => item_id, :file_id => file_id, :tag => original_shape_tag_name)
-          # item_shape_import_response = item_shape_import(:item_id => item_id, :file_id => file_id, :tag => original_shape_tag_name)
+          item_shape_import_response =  use_placeholder_import ?
+                   import_placeholder_item(import_args) :
+                   item_shape_import(import_args)
           _response[:item_shape_import] = item_shape_import_response
 
           job_id = item_shape_import_response['jobId']
