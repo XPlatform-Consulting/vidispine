@@ -51,10 +51,7 @@ module Vidispine
           @password = args[:password] || DEFAULT_PASSWORD
 
           @authorization_header_key = args.fetch(:authorization_header_key, 'Authorization')
-          @authorization_header_value = args.fetch(:authorization_header_value,
-                                                   %(Basic #{["#{username}:#{password}"]
-                                                                 .pack('m')
-                                                                 .delete("\r\n")}))
+          @authorization_header_value = args.fetch(:authorization_header_value, %(Basic #{["#{username}:#{password}"].pack('m').delete("\r\n")}))
 
           content_type = args[:content_type_header] ||= DEFAULT_HEADER_CONTENT_TYPE
           accepts = args[:accepts_header] ||= args[:accept_header] || DEFAULT_HEADER_ACCEPTS
