@@ -9,22 +9,27 @@ module Vidispine::API::Client::Requests
     PARAMETERS = [
       { :name => :item_id, :required => true, :send_in => :path },
       { :name => :item_type, :required => true, :send_in => :path },
-      :uri,
-      :fileId,
-      :tag,
-      :original,
-      :createPosters,
+
+      :allowReimport,
       :createThumbnails,
-      :overrideFastStart,
-      :requireFastStart,
       :fastStartLength,
+      :fileId,
       :growing,
+      :index,
+      :jobmetadata,
+      'no-transcode',
       :notification,
       :notificationDta,
+      :original,
+      :overrideFastStart,
       :priority,
-      :jobmetadata,
+      :resourceId,
+      :requireFastStart,
       :settings,
-      :index
+      :shapeId,
+      :tag,
+      :thumbnailService,
+      :uri
     ]
 
     def after_process_parameters
