@@ -136,7 +136,8 @@ module Vidispine
           _args = _data[:arguments_out]
           _args[:name]
         end
-        http(:post, '/collection', '', :query => { :name => collection_name })
+        path = File.join(api_endpoint_prefix, '/collection')
+        http(:post, path, '', :query => { :name => collection_name })
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/collection.html#delete-a-collection
