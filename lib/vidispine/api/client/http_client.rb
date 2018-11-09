@@ -92,6 +92,18 @@ module Vidispine
           http
         end
 
+        def user_agent=(value)
+          if (value)
+            default_request_headers['User-Agent'] = value
+          else
+            default_request_headers.delete('User-Agent')
+          end
+        end
+
+        def user_agent
+          default_request_headers['User-Agent']
+        end
+
         # Formats a HTTPRequest or HTTPResponse body for log output.
         # @param [HTTPRequest|HTTPResponse] obj
         # @return [String]
