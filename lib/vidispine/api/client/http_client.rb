@@ -45,22 +45,21 @@ module Vidispine
 
           @default_query_data = args[:default_query_data] || { }
 
-          # @user_agent_default = "#{@hostname}:#{@username} Ruby SDK Version #{Vidispine::VERSION}"
-
           @username = args[:username] || DEFAULT_USERNAME
           @password = args[:password] || DEFAULT_PASSWORD
 
           @authorization_header_key = args.fetch(:authorization_header_key, 'Authorization')
           @authorization_header_value = args.fetch(:authorization_header_value, %(Basic #{["#{username}:#{password}"].pack('m').delete("\r\n")}))
 
-          content_type = args[:content_type_header] ||= DEFAULT_HEADER_CONTENT_TYPE
-          accepts = args[:accepts_header] ||= args[:accept_header] || DEFAULT_HEADER_ACCEPTS
+          user_agent = args.fetch(:user_agent, false)
+          content_type = args.fetch(:content_type_header, DEFAULT_HEADER_CONTENT_TYPE)
+          accept_header = args.fetch(:accept_header, args.fetch(:accepts_header, DEFAULT_HEADER_ACCEPTS))
 
-          @default_request_headers = {
-            'Content-Type' => content_type,
-            'Accept' => accepts,
-            authorization_header_key => authorization_header_value,
-          }
+          @default_request_headers = { }
+          @default_request_headers['Content-Type'] = content_type if content_type
+          @default_request_headers['Accept'] = accept_header if accept_header
+          @default_request_headers[@authorization_header_key] = @authorization_header_value if @authorization_header_key
+          @default_request_headers['User-Agent'] = user_agent if user_agent
 
           @log_request_body = args.fetch(:log_request_body, true)
           @log_response_body = args.fetch(:log_response_body, true)
@@ -137,7 +136,7 @@ module Vidispine
             case response.content_type
             when 'application/json'
                response_body.empty? ? response_body : JSON.parse(response_body) # rescue response
-             else
+            else
                response_body
             end
           end
