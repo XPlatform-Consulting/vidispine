@@ -41,14 +41,24 @@ module Vidispine
 
       # Tries to find a collection using either the collection id, name, or a file path with a collection name position.
       # For use in other methods that need to perform the same type of lookup
-      # @param [Hash] :collection
-      # @param [String] :collection_id
-      # @param [String] :collection_name
+      # @args [Hash]
+      # @option args [Hash] :collection
+      # @option args [String] :collection_id
+      # @option args [String] :collection_name
+      # @option args [Array] :collections (nil) If not nil then the each element will be run through
+      #   determine_collection and the array returned
+      # @option args [String] :file_path Used when :file_path_collection_name_position is set
+      # @option args [Integer] :file_path_collection_name_position Will split the file path and be used as the index
+      #   for the collection name location
+      #
       def determine_collection(args, options = { })
+        collections = args[:collections]
+        return collections.map { |v| determine_collection(v, options) } if collections.is_a?(Array)
+
         collection = args[:collection] || { }
 
         # 3 Get Collection
-        collection_id = args[:collection_id] || collection['id']
+        collection_id = args[:collection_id] || collection[:id] || collection['id']
         unless collection_id
           collection_name = args[:collection_name] || args[:name]
           unless collection_name
@@ -541,6 +551,7 @@ module Vidispine
       #
       # @param [Hash] options
       # @option options [Boolean] :add_item_to_collection
+      # @option options [Boolean] :wait_for_import_job (true)
       # @option options [Boolean] :wait_for_transcode_job (false)
       # @option options [Boolean] :skip_transcode_if_shape_with_tag_exists (true)
       # @option options [Boolean] :use_placeholder_import (true)
@@ -657,13 +668,22 @@ module Vidispine
 
         if options[:add_item_to_collection]
           logger.debug { 'Determining Collection to Add the Item to.' }
-          collection = determine_collection(args, options)
-          _response[:collection] = collection
-          collection_id = collection['id']
+          collections = determine_collection(args, options)
+          if collections.is_a?(Array)
+            single_collection = false
+            _response[:collections] = collections
+          else
+            single_collection = true
+            _response[:collection] = collections
+            collections = [ collections ]
+          end
+          collection_object_add_responses = collections.map do |collection|
+            collection_id = collection['id']
+            logger.debug { 'Adding Item to Collection.' }
+            collection_object_add(:collection_id => collection_id, :object_id => item_id)
+          end
 
-          logger.debug { 'Adding Item to Collection.' }
-          collection_object_add_response = collection_object_add(:collection_id => collection_id, :object_id => item_id)
-          _response[:collection_object_add] = collection_object_add_response
+          _response[:collection_object_add] = single_collection ? collection_object_add_responses.first : collection_object_add_responses
         end
 
         create_thumbnails = args.fetch(:create_thumbnails, true)
