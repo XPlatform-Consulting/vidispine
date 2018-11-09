@@ -616,7 +616,9 @@ module Vidispine
 
         # Allow the file to be passed in
         file = args[:file]
-        unless file
+        if file
+          file_id = file['id']
+        else
           file_id = args[:file_id]
           file = { 'id' => file_id }
         end
@@ -628,6 +630,8 @@ module Vidispine
           raise "Error Getting Storage File. '#{storage_file_get_response.inspect}'" unless storage_file_get_response and storage_file_get_response['id']
           _response[:storage_file_get_response] = storage_file_get_response
 
+          file_found = true
+
           file = storage_file_get_response
         else
             storage_file_get_or_create_response = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, :extended_response => true)
@@ -638,27 +642,23 @@ module Vidispine
 
         if file
           _response[:item] = item = file['item']
-          file_found = true
         end
 
         _response[:file_already_existed] = file_found
         _response[:item_already_existed] = !!item
-        return _response if item
+        return _response if item # We already have an item so nothing to do
 
-        file_id = file['id']
+        file_id ||= file['id']
 
-        unless item
-          # 4.2 Create a Placeholder
-          logger.debug { 'Creating Placeholder.' }
-          #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
-          #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :timespan => [ { :start => '-INF', :end => '+INF' }.merge(_metadata_as_fields) ] } }
-          #placeholder_args = args[:placeholder_args] ||= { :container => 1, :metadata_document => { :timespan => [ { :start => '-INF', :end => '+INF' }.merge(_metadata_as_fields) ] } }
-          placeholder_args = args[:placeholder_args] ||= { :container => 1, :metadata_document => metadata_document }
-          _response[:item] = item = import_placeholder(placeholder_args)
-        end
+        # 4.2 Create a Placeholder
+        logger.debug { 'Creating Placeholder.' }
+        #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :group => [ 'Film' ], :timespan => [ { :field => [ { :name => metadata_file_path_field_id, :value => [ { :value => vidispine_file_path } ] } ], :start => '-INF', :end => '+INF' } ] } }
+        #placeholder_args = args[:placeholder_args] ||= { :container => 1, :video => 1, :metadata_document => { :timespan => [ { :start => '-INF', :end => '+INF' }.merge(_metadata_as_fields) ] } }
+        #placeholder_args = args[:placeholder_args] ||= { :container => 1, :metadata_document => { :timespan => [ { :start => '-INF', :end => '+INF' }.merge(_metadata_as_fields) ] } }
+        placeholder_args = args[:placeholder_args] ||= { :container => 1, :metadata_document => metadata_document }
+        _response[:item] = item = import_placeholder(placeholder_args)
+
         item_id = item['id']
-        shape = item['shape']
-
         raise "Error Creating Placeholder: #{item.inspect}" unless item_id
 
         # Add any additional metadata (Vidispine will only take one group at a time)
@@ -686,9 +686,8 @@ module Vidispine
           _response[:collection_object_add] = single_collection ? collection_object_add_responses.first : collection_object_add_responses
         end
 
-        create_thumbnails = args.fetch(:create_thumbnails, true)
-        create_posters = args.fetch(:create_posters, 3)
 
+        shape = item['shape']
         unless shape
           import_args_in = args[:import_args]
 
@@ -753,6 +752,9 @@ module Vidispine
           end
 
           # 8. Generate the Thumbnails and Poster Frame
+          create_thumbnails = args.fetch(:create_thumbnails, true)
+          create_posters = args.fetch(:create_posters, 3)
+
           if (create_thumbnails or create_posters)
             logger.debug { 'Generating Thumbnails(s) and Poster Frame.' }
             args_out = { :item_id => item_id }
