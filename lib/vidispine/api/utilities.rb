@@ -717,15 +717,22 @@ module Vidispine
           end
           raise "Error Creating Item Shape Import Job. Response: #{item_shape_import_response.inspect}" unless job_id
 
-          job_monitor_response = wait_for_job_completion(:job_id => job_id) { |env|
-            logger.debug { "Waiting for Item Shape Import Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
-          }
-          last_response = job_monitor_response[:last_response]
-          raise "Error Adding file As Original Shape. Response: #{last_response.inspect}" unless last_response['status'] == 'FINISHED'
 
           # 7. Generate the Transcode of the item
           transcode_tag = args.fetch(:transcode_tag, 'lowres')
-          if transcode_tag and !transcode_tag.empty? and transcode_tag.to_s.downcase != 'false'
+          should_transcode = transcode_tag and !transcode_tag.empty? and transcode_tag.to_s.downcase != 'false'
+
+          should_wait_for_import_job_completion = should_transcode || options.fetch(:wait_for_import_job, true)
+          if should_wait_for_import_job_completion
+            job_monitor_response = wait_for_job_completion(:job_id => job_id) { |env|
+              logger.debug { "Waiting for Item Shape Import Job to Complete. Time Elapsed: #{Time.now - env[:time_started]} seconds" }
+            }
+            last_response = job_monitor_response[:last_response]
+            _response[:item_shape_import_job_result] = last_response
+            raise "Error Importing File. Response: #{last_response.inspect}" unless last_response['status'] == 'FINISHED'
+          end
+
+          if should_transcode
             wait_for_transcode_job = options[:wait_for_transcode_job]
             skip_transcode_if_shape_with_tag_exists = options.fetch(:skip_transcode_if_shape_with_tag_exists, true)
             [*transcode_tag].each do |_transcode_tag|
