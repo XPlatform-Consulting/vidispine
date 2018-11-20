@@ -691,12 +691,14 @@ module Vidispine
         unless shape
           import_args_in = args[:import_args]
 
-          import_args = { :item_id => item_id, :file_id => file_id, :tag => original_shape_tag_name }
+          import_args = { :item_id => item_id, :file_id => file_id }
           import_args.merge!(symbolize_keys(import_args_in, false)) if import_args_in.is_a?(Hash)
 
           use_placeholder_import = options.fetch(:use_placeholder_import, true)
           if use_placeholder_import
             import_args[:item_type] ||= 'container'
+          else
+            import_args[:tag] ||= original_shape_tag_name
           end
 
           # 6. Add the file as the original shape
@@ -728,7 +730,7 @@ module Vidispine
             }
             last_response = job_monitor_response[:last_response]
             _response[:item_shape_import_job_result] = last_response
-            raise "Error Importing File. Response: #{last_response.inspect}" unless last_response['status'] == 'FINISHED'
+            raise "Error Importing File. Response: #{last_response.inspect}" unless %(FINISHED_WARNING FINISHED).include?(last_response['status'])
           end
 
           if should_transcode
