@@ -666,7 +666,9 @@ module Vidispine
           item_metadata_set(:item_id => item_id, :metadata_document => metadata_document)
         end
 
-        if options[:add_item_to_collection]
+
+        should_add_to_collection = options.fetch(:add_item_to_collection, [ :collections, :collection, :collection_name, :collection_id, :file_path_collection_name_position ].any? { |v|  args.keys.include?(v) })
+        if should_add_to_collection
           logger.debug { 'Determining Collection to Add the Item to.' }
           collections = determine_collection(args, options)
           if collections.is_a?(Array)
@@ -720,7 +722,7 @@ module Vidispine
 
 
           # 7. Generate the Transcode of the item
-          transcode_tag = args.fetch(:transcode_tag, 'lowres')
+          transcode_tag = args.fetch(:transcode_tag, false)
           should_transcode = transcode_tag and !transcode_tag.empty? and transcode_tag.to_s.downcase != 'false'
 
           should_wait_for_import_job_completion = should_transcode || options.fetch(:wait_for_import_job, true)
