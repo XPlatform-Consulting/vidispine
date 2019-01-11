@@ -607,6 +607,7 @@ module Vidispine
 
         _metadata = args[:metadata] || { }
         _metadata_map = args[:metadata_map] || { }
+        field_group = args[:field_group]
 
         # map metadata assuming 1 value per field
         #_metadata_as_fields = transform_metadata_to_fields(_metadata, _metadata_map, options)
@@ -661,11 +662,16 @@ module Vidispine
         item_id = item['id']
         raise "Error Creating Placeholder: #{item.inspect}" unless item_id
 
-        # Add any additional metadata (Vidispine will only take one group at a time)
-        metadata_documents.each do |metadata_document|
-          item_metadata_set(:item_id => item_id, :metadata_document => metadata_document)
+        if field_group
+          logger.debug { 'Setting Item Field-Group' }
+          item_field_group_set(:item_id => item_id, :field_group => field_group)
         end
 
+        # Add any additional metadata (Vidispine will only take one group at a time)
+        metadata_documents.each do |metadata_document|
+          logger.debug { 'Setting Item Metadata' }
+          item_metadata_set(:item_id => item_id, :metadata_document => metadata_document)
+        end
 
         should_add_to_collection = options.fetch(:add_item_to_collection, [ :collections, :collection, :collection_name, :collection_id, :file_path_collection_name_position ].any? { |v|  args.keys.include?(v) })
         if should_add_to_collection
@@ -687,7 +693,6 @@ module Vidispine
 
           _response[:collection_object_add] = single_collection ? collection_object_add_responses.first : collection_object_add_responses
         end
-
 
         shape = item['shape']
         unless shape
