@@ -19,7 +19,9 @@ module Vidispine
         # APInoAuth Path
         @api_noauth_endpoint_prefix = args.fetch(:api_noauth_endpoint_prefix, 'APInoauth')
 
-        args.fetch(:user_agent, "Vidispine Ruby SDK v#{Vidispine::VERSION}")
+        # Default useragent but only if it is not set
+        args[:user_agent] ||= args.fetch(:user_agent, "Vidispine Ruby SDK v#{Vidispine::VERSION}")
+
         @http_client = HTTPClient.new(args)
         @logger = http_client.logger
       end
