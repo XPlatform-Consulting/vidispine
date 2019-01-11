@@ -349,6 +349,40 @@ module Vidispine
         process_request_using_class(Requests::ItemExport, args, options)
       end
 
+      # Gets the field group of an item
+      # Undocumented endpoint
+      def item_field_group_get(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path   => '/item/#{item_id}/field-group',
+            :http_method => :get,
+            :parameters  => [
+              { :name => :item_id, :send_in => :path, :required => true },
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
+      # Sets the field group of an item
+      # Undocumented endpoint
+      def item_field_group_set(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+            args,
+            {
+              :http_path => '/item/#{item_id}/field-group/#{field_group}',
+              :http_method => :put,
+              :default_parameter_send_in_value => :path,
+              :parameters => [
+                { :name => :item_id, :required => true },
+                { :name => :field_group, :required => true }
+              ]
+            }.merge(options)
+        )
+        process_request(_request, options)
+      end
+
       # @see http://apidoc.vidispine.com/latest/ref/item/item.html#get-information-about-a-single-item
       def item_get(args = { }, options = { })
         # item_id = args.is_a?(String) ? args : begin
