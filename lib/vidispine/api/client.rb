@@ -941,6 +941,24 @@ module Vidispine
         process_request_using_class(Requests::StorageFileGet, args, options)
       end
 
+      # @see http://apidoc.vidispine.com/latest/ref/storage/file.html#set-file-state
+      def storage_file_state_set(args = { }, options = { })
+        _request = Requests::BaseRequest.new(
+          args,
+          {
+            :http_path => 'storage/file/#{path_arguments[:file_id]}/state/#{path_arguments[:state]}',
+            :http_method => :put,
+            :default_parameter_send_in_value => :path,
+            :parameters => [
+              { :name => :file_id, :required => true },
+              { :name => :state, :required => true },
+            ]
+          }.merge(options)
+        )
+        process_request(_request, options)
+
+      end
+
       # @see http://apidoc.vidispine.com/4.2/ref/storage/file.html#list-files-in-storage
       def storage_files_get(args = { }, options = { })
         process_request_using_class(Requests::StorageFilesGet, args, options)
