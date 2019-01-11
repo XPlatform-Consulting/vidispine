@@ -626,16 +626,21 @@ module Vidispine
 
         if file_id && file && !file['item']
           # If the passed file doesn't have an item then requery to verify that the item is absent
-          storage_file_get_response = storage_file_get(:storage_id => storage_id, :file_id => file_id, :include_item => true)
+          storage_file_get_response = storage_file_get(:storage_id => storage_id,
+                                                       :file_id => file_id, :include_item => true)
 
-          raise "Error Getting Storage File. '#{storage_file_get_response.inspect}'" unless storage_file_get_response and storage_file_get_response['id']
+          unless storage_file_get_response and storage_file_get_response['id']
+            raise "Error Getting Storage File. '#{storage_file_get_response.inspect}'"
+          end
           _response[:storage_file_get_response] = storage_file_get_response
 
           file_found = true
 
           file = storage_file_get_response
         else
-            storage_file_get_or_create_response = storage_file_get_or_create(storage_id, file_path_relative_to_storage_path, :extended_response => true)
+            storage_file_get_or_create_response = storage_file_get_or_create(storage_id,
+                                                                             file_path_relative_to_storage_path,
+                                                                             :extended_response => true)
             _response[:storage_file_get_or_create_response] = storage_file_get_or_create_response
             file = storage_file_get_or_create_response[:file]
             file_found = storage_file_get_or_create_response[:file_already_existed]
@@ -673,7 +678,10 @@ module Vidispine
           item_metadata_set(:item_id => item_id, :metadata_document => metadata_document)
         end
 
-        should_add_to_collection = options.fetch(:add_item_to_collection, [ :collections, :collection, :collection_name, :collection_id, :file_path_collection_name_position ].any? { |v|  args.keys.include?(v) })
+        should_add_to_collection = options.fetch(:add_item_to_collection,
+                                                 [ :collections, :collection, :collection_name, :collection_id,
+                                                   :file_path_collection_name_position
+                                                 ].any? { |v|  args.keys.include?(v) })
         if should_add_to_collection
           logger.debug { 'Determining Collection to Add the Item to.' }
           collections = determine_collection(args, options)
@@ -691,7 +699,9 @@ module Vidispine
             collection_object_add(:collection_id => collection_id, :object_id => item_id)
           end
 
-          _response[:collection_object_add] = single_collection ? collection_object_add_responses.first : collection_object_add_responses
+          _response[:collection_object_add] = single_collection ?
+                                                  collection_object_add_responses.first :
+                                                  collection_object_add_responses
         end
 
         shape = item['shape']
@@ -1548,6 +1558,9 @@ module Vidispine
             storage_file_get_response = file = storage_file_get(:storage_id => storage_id, :file_id => _message['fileId'], :include_item => include_item)
           end
           raise "Error Creating File on Storage. Response: #{response.inspect}" unless (file || { })['id']
+
+          # Workaround: Ran into an issue with a v4.15 installation where setting file state on creation wasn't working
+          storage_file_state_set(:file_id => file['id'], :state => creation_state) if file['state'] != creation_state
         end
 
         logger.debug { "Method: #{__method__} Response: #{file.inspect}" }
