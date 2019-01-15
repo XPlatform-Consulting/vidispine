@@ -355,7 +355,7 @@ module Vidispine
         _request = Requests::BaseRequest.new(
           args,
           {
-            :http_path   => '/item/#{item_id}/field-group',
+            :http_path   => '/item/#{path_arguments[:item_id]}/field-group',
             :http_method => :get,
             :parameters  => [
               { :name => :item_id, :send_in => :path, :required => true },
@@ -371,7 +371,7 @@ module Vidispine
         _request = Requests::BaseRequest.new(
             args,
             {
-              :http_path => '/item/#{item_id}/field-group/#{field_group}',
+              :http_path => '/item/#{path_arguments[:item_id]}/field-group/#{path_arguments[:field_group]}',
               :http_method => :put,
               :default_parameter_send_in_value => :path,
               :parameters => [
@@ -880,7 +880,7 @@ module Vidispine
               :notification,
               :notificationData,
               :priority,
-              :jobmetadata
+              :jobmetadata,
             ]
           }.merge(options)
         )
@@ -956,7 +956,6 @@ module Vidispine
           }.merge(options)
         )
         process_request(_request, options)
-
       end
 
       # @see http://apidoc.vidispine.com/4.2/ref/storage/file.html#list-files-in-storage
