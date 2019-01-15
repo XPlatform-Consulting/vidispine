@@ -519,6 +519,10 @@ module Vidispine
 
         # collections = ( (collections_get || { })['collection'] || [ ] )
 
+        comparison_method, comparison_value = options.fetch(:case_sensitive, true) ? [ :eql?, true ] : [ :casecmp, 0 ]
+        collections_search_method = return_first_match ? :find : :select
+
+        collection = nil
         first = 1
         limit = 1000
         collections = [ ]
@@ -526,13 +530,16 @@ module Vidispine
           r = collections_get(:first => first, :number => limit)
           _collections = r['collection']
           break if _collections.empty?
+
+          if return_first_match
+            collection = _collections.send(collections_search_method) { |c| c['name'].send(comparison_method, collection_name) == comparison_value }
+            break if collection
+          end
+
           collections.concat _collections
           first += _collections.length
         end
-
-        comparison_method, comparison_value = options.fetch(:case_sensitive, true) ? [ :eql?, true ] : [ :casecmp, 0 ]
-        collections_search_method = return_first_match ? :find : :select
-        collections.send(collections_search_method) { |c| c['name'].send(comparison_method, collection_name) == comparison_value }
+        return_first_match ? collection : collections.send(collections_search_method) { |c| c['name'].send(comparison_method, collection_name) == comparison_value }
       end
 
       # Adds a file using the files path
