@@ -1554,13 +1554,10 @@ module Vidispine
           if (file || { })['fileAlreadyExists']
             file_already_existed = true
             _message = file['fileAlreadyExists']
-            logger.warn { "Running Recreation of Existing File Work Around: #{_message}" }
+            logger.warn { "Running Re-creation of Existing File Workaround: #{_message}" }
             storage_file_get_response = file = storage_file_get(:storage_id => storage_id, :file_id => _message['fileId'], :include_item => include_item)
           end
           raise "Error Creating File on Storage. Response: #{response.inspect}" unless (file || { })['id']
-
-          # Workaround: Ran into an issue with a v4.15 installation where setting file state on creation wasn't working
-          storage_file_state_set(:file_id => file['id'], :state => creation_state) if file['state'] != creation_state
         end
 
         logger.debug { "Method: #{__method__} Response: #{file.inspect}" }
