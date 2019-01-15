@@ -143,7 +143,6 @@ module Vidispine
         def response_parsed
           @response_parsed ||= begin
             response_body = response.respond_to?(:body) ? response.body : ''
-            logger.debug { "Parsing Response. #{response_body.inspect}" }
 
             case response.content_type
             when 'application/json'
@@ -151,6 +150,9 @@ module Vidispine
             else
                response_body
             end
+          rescue => e
+            logger.debug { "Error Parsing Response. #{e.message}\n#{response_body.inspect}" }
+             raise
           end
         end
 
@@ -216,9 +218,13 @@ module Vidispine
           _request = klass.new(@uri.request_uri, _headers)
 
           if _request.request_body_permitted?
-            _body = (body and !body.is_a?(String)) ? JSON.generate(body) : body
-            logger.debug { "Processing Body: '#{_body}'" }
-            _request.body = _body if _body
+            begin
+              _body = (body and !body.is_a?(String)) ? JSON.generate(body) : body
+              _request.body = _body if _body
+            rescue => e
+              logger.error { "Exception Processing Request Body: #{e.message}\n#{_body}"}
+              raise
+            end
           end
 
           _request
