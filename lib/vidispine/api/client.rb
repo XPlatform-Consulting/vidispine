@@ -900,13 +900,13 @@ module Vidispine
           {
             :http_path => 'storage/#{path_arguments[:storage_id]}/file',
             :http_method => :post,
+            :default_parameter_send_in_value => :body,
             :parameters => [
               { :name => :storage_id, :send_in => :path, :required => true },
-
-              :createOnly,
+              { :name => :createOnly, :send_in => :query },
+              :path,
               :state,
-
-              { :name => :path, :send_in => :body }
+              :uri,
             ]
           }.merge(options)
         )
